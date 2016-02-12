@@ -22,9 +22,10 @@
   "dependencies": {
     "fast.js": "^0.1.1",
     "invariant": "^2.2.0",
-    "marsdb": "^0.5.22",
-    "marsdb-sync-client": "0.0.2",
-    "memoizee": "^0.3.9",
+    "marsdb": "^0.5.24",
+    "js-sha256": "^0.3.0",
+    "marsdb-sync-client": "0.0.3",
+    "marsdb-sync-server": "0.0.7",
     "passport": "^0.3.2"
   },
   "devDependencies": {

@@ -4,6 +4,7 @@ import path from 'path';
 import webpack from 'webpack';
 import webpackDevMiddleware from 'webpack-dev-middleware';
 import MarsSync from 'marsdb-sync-server';
+import * as MarsAccounts from '../lib/server'
 import requireDir from 'require-dir';
 
 
