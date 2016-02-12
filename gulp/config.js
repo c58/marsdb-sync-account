@@ -1,7 +1,7 @@
 'use strict';
 
 module.exports = {
-  src: 'lib/**/*',
+  src: 'lib/**/*.js',
   dist: 'dist',
   build: 'build',
 

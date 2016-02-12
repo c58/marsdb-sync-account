@@ -6,6 +6,7 @@ import webpackDevMiddleware from 'webpack-dev-middleware';
 import MarsSync from 'marsdb-sync-server';
 import * as MarsAccounts from '../lib/server'
 import requireDir from 'require-dir';
+import { Strategy as VKontakteStrategy } from 'passport-vkontakte';
 
 
 // Config
@@ -50,6 +51,13 @@ MarsAccounts.configure({
   middlewareApp: app,
   rootUrl: 'http://localhost:3000'
 });
+MarsAccounts.addOAuthStrategy('vkontakte', (cbUrl, cb) =>
+  new VKontakteStrategy({
+    clientID: '3509560',
+    clientSecret: '2sZYlQTvpKJMqv6Ph8l7',
+    callbackURL: cbUrl
+  }, cb)
+);
 
 requireDir('./js/models');
 requireDir('./js/publishers');

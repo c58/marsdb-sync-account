@@ -4,6 +4,7 @@ import React from 'react';
 import ReactDOM from 'react-dom';
 import { Random } from 'marsdb';
 import MarsClient from 'marsdb-sync-client';
+import * as MarsAccount from '../lib/client';
 import TodoModel from './models/Todo.model';
 
 
@@ -14,9 +15,8 @@ class DDPTestComponent extends React.Component {
 
   componentDidMount() {
     TodoModel.find({}, {sub: ['allTodos']}).observe((todos) => {
-      console.log(todos);
       this.setState({messages: todos});
-    })
+    });
   }
 
   handleClickHello = () => {
