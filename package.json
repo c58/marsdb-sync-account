@@ -20,11 +20,15 @@
     "url": "git+ssh://git@github.com/c58/marsdb-sync-account.git"
   },
   "dependencies": {
+    "bcryptjs": "^2.3.0",
+    "escape-string-regexp": "^1.0.4",
     "fast.js": "^0.1.1",
     "invariant": "^2.2.0",
     "js-sha256": "^0.3.0",
     "jsonwebtoken": "^5.5.4",
-    "passport": "^0.3.2"
+    "mailcomposer": "^3.6.2",
+    "passport": "^0.3.2",
+    "simplesmtp": "^0.3.35"
   },
   "peerDependencies": {
     "marsdb": "0.6.x",
