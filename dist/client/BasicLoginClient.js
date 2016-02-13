@@ -6,8 +6,6 @@ Object.defineProperty(exports, "__esModule", {
 
 var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
 
-var _marsdb = require('marsdb');
-
 var _marsdbSyncClient = require('marsdb-sync-client');
 
 var _marsdbSyncClient2 = _interopRequireDefault(_marsdbSyncClient);
@@ -33,18 +31,18 @@ var BasicLoginClient = function () {
 
     this._unsetLoginData = function () {
       if (_haveLocalstorage) {
-        localStorage.remove(_tokenKey);
-        localStorage.remove(_userIdKey);
+        localStorage.removeItem(_tokenKey);
+        localStorage.removeItem(_userIdKey);
       }
     };
 
     this._handleLoginResponse = function (_ref) {
       var userId = _ref.userId;
       var token = _ref.token;
-      var tokenExpires = _ref.tokenExpires;
 
       if (_haveLocalstorage) {
-        localStorage.set(_tokenKey, _marsdb.EJSON.stringify({ token: token, expires: expires })), localStorage.set(_userIdKey, userId);
+        localStorage.setItem(_tokenKey, token);
+        localStorage.setItem(_userIdKey, userId);
       }
       return userId;
     };
@@ -125,18 +123,12 @@ var BasicLoginClient = function () {
   }, {
     key: 'getSavedUserId',
     value: function getSavedUserId() {
-      return _haveLocalstorage && localStorage.get(_userIdKey);
+      return _haveLocalstorage && localStorage.getItem(_userIdKey);
     }
   }, {
     key: '_getRestoreLoginToken',
     value: function _getRestoreLoginToken() {
-      var tokenObjStr = _haveLocalstorage && localStorage.get(_tokenKey);
-      if (tokenObjStr) {
-        var tokenObj = _marsdb.EJSON.parse(tokenObjStr);
-        if (tokenObj && tokenObj.expires && tokenObj.expires > new Date()) {
-          return tokenObj.token;
-        }
-      }
+      return _haveLocalstorage && localStorage.getItem(_tokenKey);
     }
   }]);
 

@@ -4,9 +4,10 @@ import path from 'path';
 import webpack from 'webpack';
 import webpackDevMiddleware from 'webpack-dev-middleware';
 import MarsSync from 'marsdb-sync-server';
-import * as MarsAccounts from '../lib/server'
+import * as MarsAccounts from 'marsdb-sync-account/dist/server'
 import requireDir from 'require-dir';
 import { Strategy as VKontakteStrategy } from 'passport-vkontakte';
+import UsersModel from './js/models/Users.model';
 
 
 // Config
@@ -17,7 +18,9 @@ const compiler = webpack({
   entry: path.resolve(__dirname, 'js', 'app.js'),
   resolve: {
     alias: {
-      marsdb: path.resolve('./node_modules/marsdb'),
+      'marsdb': path.resolve('./node_modules/marsdb'),
+      'marsdb-sync-server': path.resolve('./node_modules/marsdb-sync-server'),
+      'marsdb-sync-client': path.resolve('./node_modules/marsdb-sync-client'),
     },
   },
   module: {
@@ -48,6 +51,8 @@ app.use(webpackDevMiddleware(compiler, {
 // Configure marsdb-sync-server
 MarsSync.configure({ server });
 MarsAccounts.configure({
+  usersColl: UsersModel,
+  secretKey: 'myownsecret',
   middlewareApp: app,
   rootUrl: 'http://localhost:3000'
 });

@@ -11,15 +11,7 @@ exports.register = register;
 exports.loginOAuth = loginOAuth;
 exports.loginOAuthToken = loginOAuthToken;
 
-var _invariant = require('invariant');
-
-var _invariant2 = _interopRequireDefault(_invariant);
-
 var _marsdb = require('marsdb');
-
-var _marsdbSyncClient = require('marsdb-sync-client');
-
-var _marsdbSyncClient2 = _interopRequireDefault(_marsdbSyncClient);
 
 var _OAuthLoginClient = require('./OAuthLoginClient');
 

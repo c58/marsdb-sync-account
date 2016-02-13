@@ -66,13 +66,13 @@ var BasicOAuthLoginClient = function (_BasicLoginClient) {
 
       return new Promise(function (resolve, reject) {
         _this2._showPopup(serviceUrl, function () {
-          var secret = _credentialSecrets[credentialToken] || _haveLocalStorage && localStorage.get(credentialToken);
+          var secret = _credentialSecrets[credentialToken] || _haveLocalStorage && localStorage.getItem(credentialToken);
           if (!secret) {
             reject(new Error('No secret for given credential token'));
           } else {
             delete _credentialSecrets[credentialToken];
             if (_haveLocalStorage) {
-              localStorage.remove(credentialToken);
+              localStorage.removeItem(credentialToken);
             }
             _marsdbSyncClient2.default.call(_urlPrefix + '/secret/login', credentialToken, secret).then(_this2._handleLoginResponse, reject).then(resolve);
           }
@@ -253,7 +253,7 @@ var AOAuth_Cordova = function (_BasicOAuthLoginClien2) {
           var hashFragment = splitUrl[1];
 
           if (!hashFragment) {
-            setTimeout(pageLoaded, 500);
+            setTimeout(pageLoaded, 100);
             return;
           }
 

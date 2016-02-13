@@ -1,6 +1,6 @@
 {
   "name": "marsdb-sync-account",
-  "version": "0.0.1",
+  "version": "0.1.0",
   "author": "Artem Artemev <art@studytime.me>",
   "contributors": [
     "Artem Artemev"
@@ -24,12 +24,17 @@
     "invariant": "^2.2.0",
     "js-sha256": "^0.3.0",
     "jsonwebtoken": "^5.5.4",
-    "marsdb": "^0.5.24",
-    "marsdb-sync-client": "0.0.3",
-    "marsdb-sync-server": "0.0.7",
     "passport": "^0.3.2"
   },
+  "peerDependencies": {
+    "marsdb": "0.6.x",
+    "marsdb-sync-client": "0.1.x",
+    "marsdb-sync-server": "0.2.x"
+  },
   "devDependencies": {
+    "marsdb": "^0.6.0",
+    "marsdb-sync-client": "^0.1.0",
+    "marsdb-sync-server": "^0.2.0",
     "core-js": "^2.0.0",
     "babel-cli": "^6.3.17",
     "babel-eslint": "^5.0.0-beta6",

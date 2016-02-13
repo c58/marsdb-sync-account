@@ -3,9 +3,10 @@ import {IndexRoute, Route, browserHistory, Router} from 'react-router';
 import React from 'react';
 import ReactDOM from 'react-dom';
 import { Random } from 'marsdb';
-import MarsClient from 'marsdb-sync-client';
-import * as MarsAccount from '../lib/client';
+import * as MarsClient from 'marsdb-sync-client/dist';
+import * as MarsAccount from 'marsdb-sync-account/dist/client';
 import TodoModel from './models/Todo.model';
+import UsersModel from './models/Users.model';
 
 
 class DDPTestComponent extends React.Component {
@@ -14,13 +15,18 @@ class DDPTestComponent extends React.Component {
   };
 
   componentDidMount() {
+    MarsClient.subscribe('loggedInUser');
     TodoModel.find({}, {sub: ['allTodos']}).observe((todos) => {
       this.setState({messages: todos});
     });
+    MarsAccount.currentUser(UsersModel).observe(usr => {
+      console.log(usr);
+    })
   }
 
   handleClickHello = () => {
-    MarsClient.call('sayHello', Math.random());
+    MarsAccount.loginOAuth('vkontakte');
+    //MarsClient.call('sayHello', Math.random());
   };
 
   handleInsert = () => {

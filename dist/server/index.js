@@ -22,12 +22,16 @@ var _BasicLoginManager = require('./BasicLoginManager');
 
 var _BasicLoginManager2 = _interopRequireDefault(_BasicLoginManager);
 
+var _AccountManager = require('./AccountManager');
+
+var _AccountManager2 = _interopRequireDefault(_AccountManager);
+
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
 // Internals
-var _emitter = new _marsdb.EventEmitter();
 var _oauthManager = null;
 var _basicManager = null;
+var _accManager = null;
 var _usersCollection = null;
 
 /**
@@ -40,12 +44,14 @@ function configure(_ref) {
   var middlewareApp = _ref.middlewareApp;
   var rootUrl = _ref.rootUrl;
   var usersColl = _ref.usersColl;
+  var secretKey = _ref.secretKey;
 
   (0, _invariant2.default)(middlewareApp, 'AccountManager.configure(...): you need to pass express/connect app ' + 'to MarsSync.configure() `middlewareApp` field');
 
   _usersCollection = usersColl || new _marsdb.Collection('users');
-  _oauthManager = new _OAuthLoginManager2.default(_emitter, middlewareApp, rootUrl);
-  _basicManager = new _BasicLoginManager2.default(_emitter, middlewareApp, rootUrl);
+  _accManager = new _AccountManager2.default(secretKey);
+  _oauthManager = new _OAuthLoginManager2.default(_accManager, middlewareApp, rootUrl);
+  _basicManager = new _BasicLoginManager2.default(_accManager, middlewareApp, rootUrl);
 }
 
 /**
@@ -68,7 +74,7 @@ function addOAuthStrategy(provider, strategyCreatorFn) {
  * @param  {Function} handlerFn
  */
 function listenUserCreated(handlerFn) {
-  _emitter.on('user:created', handlerFn);
+  _accManager.on('user:created', handlerFn);
 }
 
 /**
