@@ -1,4 +1,4 @@
-(function(f){if(typeof exports==="object"&&typeof module!=="undefined"){module.exports=f()}else if(typeof define==="function"&&define.amd){define([],f)}else{var g;if(typeof window!=="undefined"){g=window}else if(typeof global!=="undefined"){g=global}else if(typeof self!=="undefined"){g=self}else{g=this}(g.Mars || (g.Mars = {})).Meteor = f()}})(function(){var define,module,exports;return (function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof require=="function"&&require;if(!u&&a)return a(o,!0);if(i)return i(o,!0);var f=new Error("Cannot find module '"+o+"'");throw f.code="MODULE_NOT_FOUND",f}var l=n[o]={exports:{}};t[o][0].call(l.exports,function(e){var n=t[o][1][e];return s(n?n:e)},l,l.exports,e,t,n,r)}return n[o].exports}var i=typeof require=="function"&&require;for(var o=0;o<r.length;o++)s(r[o]);return s})({1:[function(require,module,exports){
+(function(f){if(typeof exports==="object"&&typeof module!=="undefined"){module.exports=f()}else if(typeof define==="function"&&define.amd){define([],f)}else{var g;if(typeof window!=="undefined"){g=window}else if(typeof global!=="undefined"){g=global}else if(typeof self!=="undefined"){g=self}else{g=this}(g.Mars || (g.Mars = {})).Account = f()}})(function(){var define,module,exports;return (function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof require=="function"&&require;if(!u&&a)return a(o,!0);if(i)return i(o,!0);var f=new Error("Cannot find module '"+o+"'");throw f.code="MODULE_NOT_FOUND",f}var l=n[o]={exports:{}};t[o][0].call(l.exports,function(e){var n=t[o][1][e];return s(n?n:e)},l,l.exports,e,t,n,r)}return n[o].exports}var i=typeof require=="function"&&require;for(var o=0;o<r.length;o++)s(r[o]);return s})({1:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -7,21 +7,39 @@ Object.defineProperty(exports, "__esModule", {
 
 var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
 
+exports._createPasswordObject = _createPasswordObject;
+
+var _jsSha = require('js-sha256');
+
+var _jsSha2 = _interopRequireDefault(_jsSha);
+
 var _marsdbSyncClient = require('marsdb-sync-client');
 
-var _marsdbSyncClient2 = _interopRequireDefault(_marsdbSyncClient);
+var MarsSync = _interopRequireWildcard(_marsdbSyncClient);
+
+var _ErrorCodes = require('../common/ErrorCodes');
+
+function _interopRequireWildcard(obj) { if (obj && obj.__esModule) { return obj; } else { var newObj = {}; if (obj != null) { for (var key in obj) { if (Object.prototype.hasOwnProperty.call(obj, key)) newObj[key] = obj[key]; } } newObj.default = obj; return newObj; } }
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
 // Internals
+function _createPasswordObject(passStr) {
+  return {
+    algorithm: 'sha-256',
+    digest: (0, _jsSha2.default)(passStr)
+  };
+}
+
+// Constants
 var _haveLocalstorage = typeof localStorage !== 'undefined' || null;
 var _tokenKey = 'auth.login.token';
 var _userIdKey = 'auth.login.id';
 
 /**
- * General methods for logging in the client
+ * Email/Password login clint
  */
 
 var BasicLoginClient = function () {
@@ -59,13 +77,14 @@ var BasicLoginClient = function () {
 
 
     /**
-     * Login user with username and password
-     * @param  {String} username
+     * Login user with email and password
+     * @param  {String} email
      * @param  {String} password
      * @return {Promise}
      */
-    value: function login(username, password) {
-      return _marsdbSyncClient2.default.call('/auth/basic/login', username, password).then(this._handleLoginResponse, this._handleLoginError);
+    value: function login(email, password) {
+      var passObj = _createPasswordObject(password);
+      return MarsSync.call('/auth/basic/login', email, passObj).then(this._handleLoginResponse, this._handleLoginError);
     }
 
     /**
@@ -75,7 +94,7 @@ var BasicLoginClient = function () {
   }, {
     key: 'logout',
     value: function logout() {
-      _marsdbSyncClient2.default.call('/auth/basic/logout');
+      MarsSync.call('/auth/basic/logout');
       this._unsetLoginData();
     }
 
@@ -89,8 +108,9 @@ var BasicLoginClient = function () {
 
   }, {
     key: 'register',
-    value: function register(username, password) {
-      return _marsdbSyncClient2.default.call('/auth/basic/register', username, password).then(this._handleLoginResponse, this._handleLoginError);
+    value: function register(email, password) {
+      var passObj = _createPasswordObject(password);
+      return MarsSync.call('/auth/basic/register', email, passObj).then(this._handleLoginResponse, this._handleLoginError);
     }
 
     /**
@@ -109,9 +129,9 @@ var BasicLoginClient = function () {
       return Promise.resolve().then(function () {
         var token = _this2._getRestoreLoginToken();
         if (token) {
-          return _marsdbSyncClient2.default.call('/auth/token/login', token);
+          return MarsSync.apply('/auth/token/login', [token], { retryOnDisconnect: true });
         } else {
-          throw new Error('No login toke found');
+          throw new Error('No login tokek found');
         }
       }).then(this._handleLoginResponse, this._handleLoginError);
     }
@@ -137,7 +157,7 @@ var BasicLoginClient = function () {
 }();
 
 exports.default = BasicLoginClient;
-},{"marsdb-sync-client":15}],2:[function(require,module,exports){
+},{"../common/ErrorCodes":4,"js-sha256":6,"marsdb-sync-client":undefined}],2:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -152,13 +172,15 @@ var _marsdb = require('marsdb');
 
 var _marsdbSyncClient = require('marsdb-sync-client');
 
-var _marsdbSyncClient2 = _interopRequireDefault(_marsdbSyncClient);
+var MarsSync = _interopRequireWildcard(_marsdbSyncClient);
 
 var _BasicLoginClient2 = require('./BasicLoginClient');
 
 var _BasicLoginClient3 = _interopRequireDefault(_BasicLoginClient2);
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
+
+function _interopRequireWildcard(obj) { if (obj && obj.__esModule) { return obj; } else { var newObj = {}; if (obj != null) { for (var key in obj) { if (Object.prototype.hasOwnProperty.call(obj, key)) newObj[key] = obj[key]; } } newObj.default = obj; return newObj; } }
 
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
@@ -214,7 +236,7 @@ var BasicOAuthLoginClient = function (_BasicLoginClient) {
             if (_haveLocalStorage) {
               localStorage.removeItem(credentialToken);
             }
-            _marsdbSyncClient2.default.call(_urlPrefix + '/secret/login', credentialToken, secret).then(_this2._handleLoginResponse, reject).then(resolve);
+            MarsSync.call(_urlPrefix + '/secret/login', credentialToken, secret).then(_this2._handleLoginResponse, reject).then(resolve);
           }
         });
       }).then(null, this._handleLoginError);
@@ -229,7 +251,7 @@ var BasicOAuthLoginClient = function (_BasicLoginClient) {
   }, {
     key: 'loginWithToken',
     value: function loginWithToken(serviceName, accessToken) {
-      return _marsdbSyncClient2.default.call(_urlPrefix + '/token/login', serviceName, accessToken).then(this._handleLoginResponse, this._handleLoginError);
+      return MarsSync.call(_urlPrefix + '/token/login', serviceName, accessToken).then(this._handleLoginResponse, this._handleLoginError);
     }
   }, {
     key: '_handleCredentialSecret',
@@ -441,12 +463,15 @@ var AOAuth_Cordova = function (_BasicOAuthLoginClien2) {
 
 
 exports.default = _isCordova ? AOAuth_Cordova : AOAuth_Browser;
-},{"./BasicLoginClient":1,"marsdb":undefined,"marsdb-sync-client":15}],3:[function(require,module,exports){
+},{"./BasicLoginClient":1,"marsdb":undefined,"marsdb-sync-client":undefined}],3:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
   value: true
 });
+exports._handleSuccessLogin = _handleSuccessLogin;
+exports._handleFailLogin = _handleFailLogin;
+exports.configure = configure;
 exports.currentUser = currentUser;
 exports.logout = logout;
 exports.restoreLogin = restoreLogin;
@@ -454,8 +479,6 @@ exports.loginBasic = loginBasic;
 exports.register = register;
 exports.loginOAuth = loginOAuth;
 exports.loginOAuthToken = loginOAuthToken;
-
-var _marsdb = require('marsdb');
 
 var _OAuthLoginClient = require('./OAuthLoginClient');
 
@@ -467,14 +490,51 @@ var _BasicLoginClient2 = _interopRequireDefault(_BasicLoginClient);
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
+function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+
+var EventEmitter = typeof window !== 'undefined' && window.Mars ? window.Mars.EventEmitter : require('marsdb').EventEmitter;
+var MarsClient = typeof window !== 'undefined' && window.Mars ? window.Mars.Meteor : require('marsdb-sync-client');
+
 // Internals
-var _basicLogin = new _BasicLoginClient2.default();
-var _oauthLogin = new _OAuthLoginClient2.default();
-var _updateUserEmitter = new _marsdb.EventEmitter();
-var _handleSuccessLogin = function _handleSuccessLogin(userId) {
+var _basicLogin = null;
+var _oauthLogin = null;
+var _updateUserEmitter = null;
+
+function _handleSuccessLogin(userId) {
   _updateUserEmitter.emit('change', userId);
   return userId;
+}
+
+function _handleFailLogin(err) {
+  _updateUserEmitter.emit('change', null);
+  throw err;
+}
+
+var RestoreLoginManager = function RestoreLoginManager(ddpConn) {
+  _classCallCheck(this, RestoreLoginManager);
+
+  ddpConn.on('status:connected', function (reconnected) {
+    if (reconnected) {
+      restoreLogin();
+    }
+  });
 };
+
+/**
+ * Configure Mars stack to use Accounts
+ * @param  {Object} options
+ */
+
+
+function configure() {
+  var options = arguments.length <= 0 || arguments[0] === undefined ? {} : arguments[0];
+
+  MarsClient.addManager(RestoreLoginManager);
+  _basicLogin = new _BasicLoginClient2.default();
+  _oauthLogin = new _OAuthLoginClient2.default();
+  _updateUserEmitter = new EventEmitter();
+  restoreLogin();
+}
 
 /**
  * Return a cursor that returns current logged in user object,
@@ -506,7 +566,7 @@ function logout() {
  * @return {Promise}
  */
 function restoreLogin() {
-  return _basicLogin.restoreLogin().then(_handleSuccessLogin);
+  return _basicLogin.restoreLogin().then(_handleSuccessLogin, _handleFailLogin);
 }
 
 /**
@@ -518,19 +578,19 @@ function restoreLogin() {
  * @return {Promise}
  */
 function loginBasic(username, password) {
-  return _basicLogin.login(username, password).then(_handleSuccessLogin);
+  return _basicLogin.login(username, password).then(_handleSuccessLogin, _handleFailLogin);
 }
 
 /**
- * Register the user with given username and password.
+ * Register the user with given email and password.
  * If registered successfully the user will be also
  * registered and promise resolved as any other login method.
- * @param  {String} username
+ * @param  {String} email
  * @param  {String} password
  * @return {Promise}
  */
-function register(username, password) {
-  return _basicLogin.register(username, password).then(_handleSuccessLogin);
+function register(email, password) {
+  return _basicLogin.register(email, password).then(_handleSuccessLogin, _handleFailLogin);
 }
 
 /**
@@ -541,7 +601,7 @@ function register(username, password) {
  * @return {Promise}
  */
 function loginOAuth(serviceName) {
-  return _oauthLogin.login(serviceName).then(_handleSuccessLogin);
+  return _oauthLogin.login(serviceName).then(_handleSuccessLogin, _handleFailLogin);
 }
 
 /**
@@ -553,2005 +613,260 @@ function loginOAuth(serviceName) {
  * @return {Promise}
  */
 function loginOAuthToken(serviceName, accessToken) {
-  return _oauthLogin.loginWithToken(serviceName, accessToken).then(_handleSuccessLogin);
+  return _oauthLogin.loginWithToken(serviceName, accessToken).then(_handleSuccessLogin, _handleFailLogin);
 }
-},{"./BasicLoginClient":1,"./OAuthLoginClient":2,"marsdb":undefined}],4:[function(require,module,exports){
+},{"./BasicLoginClient":1,"./OAuthLoginClient":2,"marsdb":undefined,"marsdb-sync-client":undefined}],4:[function(require,module,exports){
+'use strict';
+
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+/**
+ * Error codes for basic login
+ * @type {Object}
+ */
+var BASIC_LOGIN_ERR = exports.BASIC_LOGIN_ERR = {
+  WRONG_PASS: 'WRONG_PASS',
+  WRONG_EMAIL: 'WRONG_EMAIL',
+  INVALID_EMAIL: 'INVALID_EMAIL',
+  INVALID_PASS: 'INVALID_PASS',
+  USED_EMAIL: 'USED_EMAIL'
+};
+},{}],5:[function(require,module,exports){
 module.exports = require('./dist/client');
 
-},{"./dist/client":3}],5:[function(require,module,exports){
-'use strict';
-
-var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
-
-var _get = function get(object, property, receiver) { if (object === null) object = Function.prototype; var desc = Object.getOwnPropertyDescriptor(object, property); if (desc === undefined) { var parent = Object.getPrototypeOf(object); if (parent === null) { return undefined; } else { return get(parent, property, receiver); } } else if ("value" in desc) { return desc.value; } else { var getter = desc.get; if (getter === undefined) { return undefined; } return getter.call(receiver); } };
-
-Object.defineProperty(exports, "__esModule", {
-  value: true
-});
-exports.createCollectionDelegate = createCollectionDelegate;
-
-var _bind2 = require('fast.js/function/bind');
-
-var _bind3 = _interopRequireDefault(_bind2);
-
-var _forEach = require('fast.js/forEach');
-
-var _forEach2 = _interopRequireDefault(_forEach);
-
-var _keys2 = require('fast.js/object/keys');
-
-var _keys3 = _interopRequireDefault(_keys2);
-
-function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
-
-function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
-
-function _possibleConstructorReturn(self, call) { if (!self) { throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); } return call && (typeof call === "object" || typeof call === "function") ? call : self; }
-
-function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function, not " + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; }
-
-var Collection = typeof window !== 'undefined' && window.Mars ? window.Mars.Collection : require('marsdb').Collection;
-
-function createCollectionDelegate(connection) {
-  var _currentDelegateClass = Collection.defaultDelegate();
-
-  /**
-   * Collection manager is a factory for Mars.Collection
-   * objects (one object by collection name).
-   * It also syncing client/server changes.
-   */
-
-  var CollectionManager = function (_currentDelegateClass2) {
-    _inherits(CollectionManager, _currentDelegateClass2);
-
-    function CollectionManager() {
-      var _Object$getPrototypeO;
-
-      _classCallCheck(this, CollectionManager);
-
-      for (var _len = arguments.length, args = Array(_len), _key = 0; _key < _len; _key++) {
-        args[_key] = arguments[_key];
-      }
-
-      var _this = _possibleConstructorReturn(this, (_Object$getPrototypeO = Object.getPrototypeOf(CollectionManager)).call.apply(_Object$getPrototypeO, [this].concat(args)));
-
-      connection.on('status:connected', (0, _bind3.default)(_this._handleConnected, _this));
-      connection.on('message:added', (0, _bind3.default)(_this._handleRemoteAdded, _this));
-      connection.on('message:changed', (0, _bind3.default)(_this._handleRemoteChanged, _this));
-      connection.on('message:removed', (0, _bind3.default)(_this._handleRemoteRemoved, _this));
-      return _this;
-    }
-
-    _createClass(CollectionManager, [{
-      key: 'insert',
-      value: function insert(doc) {
-        var _this2 = this;
-
-        var options = arguments.length <= 1 || arguments[1] === undefined ? {} : arguments[1];
-        var randomId = arguments.length <= 2 || arguments[2] === undefined ? {} : arguments[2];
-
-        var localInsert = undefined;
-
-        if (!options.quiet) {
-          var methodName = '/' + this.db.modelName + '/insert';
-          var handleInsertError = function handleInsertError(e) {
-            return localInsert.then(function () {
-              return _this2.db.remove(doc._id, { quiet: true });
-            }).then(function () {
-              throw e;
-            });
-          };
-
-          var result = connection.methodManager.apply(methodName, [doc, options], randomId.seed).then(null, handleInsertError);
-
-          if (options.waitResult) {
-            return result;
-          }
-        }
-
-        localInsert = _get(Object.getPrototypeOf(CollectionManager.prototype), 'insert', this).call(this, doc, options, randomId);
-        return localInsert;
-      }
-    }, {
-      key: 'remove',
-      value: function remove(query) {
-        var _this3 = this;
-
-        var options = arguments.length <= 1 || arguments[1] === undefined ? {} : arguments[1];
-
-        var localRemove = undefined;
-
-        if (!options.quiet) {
-          var methodName = '/' + this.db.modelName + '/remove';
-          var handleRemoveError = function handleRemoveError(e) {
-            return localRemove.then(function (removedDocs) {
-              return _this3.db.insertAll(removedDocs, { quiet: true });
-            }).then(function () {
-              throw e;
-            });
-          };
-
-          var result = connection.methodManager.apply(methodName, [query, options]).then(null, handleRemoveError);
-
-          if (options.waitResult) {
-            return result;
-          }
-        }
-
-        localRemove = _get(Object.getPrototypeOf(CollectionManager.prototype), 'remove', this).call(this, query, options);
-        return localRemove;
-      }
-    }, {
-      key: 'update',
-      value: function update(query, modifier) {
-        var _this4 = this;
-
-        var options = arguments.length <= 2 || arguments[2] === undefined ? {} : arguments[2];
-
-        var localUpdate = undefined;
-
-        if (!options.quiet) {
-          var methodName = '/' + this.db.modelName + '/update';
-          var handleUpdateError = function handleUpdateError(e) {
-            return localUpdate.then(function (res) {
-              (0, _forEach2.default)(res.updated, function (d, i) {
-                if (!res.original[i]) {
-                  _this4.db.remove(d._id, { quiet: true });
-                } else {
-                  var docId = res.original[i]._id;
-                  delete res.original[i]._id;
-                  _this4.db.update({ _id: docId }, res.original[i], { quiet: true, upsert: true });
-                }
-              });
-            }).then(function () {
-              throw e;
-            });
-          };
-
-          var result = connection.methodManager.apply(methodName, [query, modifier, options]).then(null, handleUpdateError);
-
-          if (options.waitResult) {
-            return result;
-          }
-        }
-
-        localUpdate = _get(Object.getPrototypeOf(CollectionManager.prototype), 'update', this).call(this, query, modifier, options);
-        return localUpdate;
-      }
-    }, {
-      key: '_handleRemoteAdded',
-      value: function _handleRemoteAdded(msg) {
-        delete msg.fields._id;
-        return this.db.update({ _id: msg.id }, msg.fields, { quiet: true, upsert: true });
-      }
-    }, {
-      key: '_handleRemoteChanged',
-      value: function _handleRemoteChanged(msg) {
-        var modifier = {};
-        if (Array.isArray(msg.cleared) && msg.cleared.length > 0) {
-          modifier.$unset = {};
-          var _iteratorNormalCompletion = true;
-          var _didIteratorError = false;
-          var _iteratorError = undefined;
-
-          try {
-            for (var _iterator = msg.cleared[Symbol.iterator](), _step; !(_iteratorNormalCompletion = (_step = _iterator.next()).done); _iteratorNormalCompletion = true) {
-              var f = _step.value;
-
-              modifier.$unset[f] = 1;
-            }
-          } catch (err) {
-            _didIteratorError = true;
-            _iteratorError = err;
-          } finally {
-            try {
-              if (!_iteratorNormalCompletion && _iterator.return) {
-                _iterator.return();
-              }
-            } finally {
-              if (_didIteratorError) {
-                throw _iteratorError;
-              }
-            }
-          }
-        }
-        if (msg.fields) {
-          delete msg.fields._id;
-          modifier.$set = {};
-          (0, _forEach2.default)(msg.fields, function (v, k) {
-            modifier.$set[k] = v;
-          });
-        }
-
-        if ((0, _keys3.default)(modifier).length > 0) {
-          return this.db.update(msg.id, modifier, { quiet: true });
-        }
-      }
-    }, {
-      key: '_handleRemoteRemoved',
-      value: function _handleRemoteRemoved(msg) {
-        return this.db.remove(msg.id, { quiet: true });
-      }
-    }, {
-      key: '_handleConnected',
-      value: function _handleConnected(reconnected) {
-        var _this5 = this;
-
-        var methodName = '/' + this.db.modelName + '/sync';
-        return this.db.ids().then(function (ids) {
-          return connection.methodManager.apply(methodName, [ids]).result();
-        }).then(function (removedIds) {
-          return _this5.db.remove({ _id: { $in: removedIds } }, { quiet: true, multi: true });
-        });
-      }
-    }]);
-
-    return CollectionManager;
-  }(_currentDelegateClass);
-
-  return CollectionManager;
-}
-},{"fast.js/forEach":18,"fast.js/function/bind":21,"fast.js/object/keys":26,"marsdb":undefined}],6:[function(require,module,exports){
-'use strict';
-
-var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
-
-var _get = function get(object, property, receiver) { if (object === null) object = Function.prototype; var desc = Object.getOwnPropertyDescriptor(object, property); if (desc === undefined) { var parent = Object.getPrototypeOf(object); if (parent === null) { return undefined; } else { return get(parent, property, receiver); } } else if ("value" in desc) { return desc.value; } else { var getter = desc.get; if (getter === undefined) { return undefined; } return getter.call(receiver); } };
-
-Object.defineProperty(exports, "__esModule", {
-  value: true
-});
-exports._isCacheValid = _isCacheValid;
-exports.createCursorWithSub = createCursorWithSub;
-
-var _keys2 = require('fast.js/object/keys');
-
-var _keys3 = _interopRequireDefault(_keys2);
-
-function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
-
-function _toConsumableArray(arr) { if (Array.isArray(arr)) { for (var i = 0, arr2 = Array(arr.length); i < arr.length; i++) { arr2[i] = arr[i]; } return arr2; } else { return Array.from(arr); } }
-
-function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
-
-function _possibleConstructorReturn(self, call) { if (!self) { throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); } return call && (typeof call === "object" || typeof call === "function") ? call : self; }
-
-function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function, not " + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; }
-
-var Collection = typeof window !== 'undefined' && window.Mars ? window.Mars.Collection : require('marsdb').Collection;
-
-// Internals
-function _isCacheValid(tryCache, result) {
-  var resolveCache = false;
-  if (typeof tryCache === 'function') {
-    resolveCache = tryCache(result);
-  } else if (Array.isArray(result) && result.length > 0 || Object.prototype.toString.call(result) === '[object Object]' && (0, _keys3.default)(result).length > 0) {
-    resolveCache = true;
-  }
-  return resolveCache;
-}
-
-/**
- * Creates a Cursor class based on current default crusor class.
- * Created class adds support of `sub` field of options for
- * automatically subscribe/unsubscribe.
- * @param  {DDPConnection} connection
- * @return {Cursor}
- */
-function createCursorWithSub(connection) {
-  var _currentCursorClass = Collection.defaultCursor();
-
-  /**
-   * Cursor that automatically subscribe and unsubscribe
-   * on cursor observing statred/stopped.
-   */
-
-  var CursorWithSub = function (_currentCursorClass2) {
-    _inherits(CursorWithSub, _currentCursorClass2);
-
-    function CursorWithSub() {
-      _classCallCheck(this, CursorWithSub);
-
-      return _possibleConstructorReturn(this, Object.getPrototypeOf(CursorWithSub).apply(this, arguments));
-    }
-
-    _createClass(CursorWithSub, [{
-      key: '_doUpdate',
-      value: function _doUpdate(firstRun) {
-        var _this2 = this;
-
-        var _options = this.options;
-        var sub = _options.sub;
-        var waitReady = _options.waitReady;
-        var tryCache = _options.tryCache;
-
-        var superUpdate = function superUpdate() {
-          return _get(Object.getPrototypeOf(CursorWithSub.prototype), '_doUpdate', _this2).call(_this2, firstRun);
-        };
-
-        if (!this._subscription && sub) {
-          var _connection$subManage;
-
-          this._subscription = (_connection$subManage = connection.subManager).subscribe.apply(_connection$subManage, _toConsumableArray(sub));
-
-          this.once('observeStopped', function () {
-            _this2._subscription.stop();
-            delete _this2._subscription;
-          });
-
-          if (waitReady) {
-            return this._subscription.ready().then(superUpdate);
-          } else if (tryCache) {
-            return this.exec().then(function (result) {
-              if (_isCacheValid(tryCache, result)) {
-                _this2._updateLatestIds();
-                return _this2._propagateUpdate(firstRun).then(function () {
-                  return result;
-                });
-              } else {
-                return _this2._subscription.ready().then(superUpdate);
-              }
-            });
-          }
-        }
-
-        return superUpdate();
-      }
-    }]);
-
-    return CursorWithSub;
-  }(_currentCursorClass);
-
-  return CursorWithSub;
-}
-},{"fast.js/object/keys":26,"marsdb":undefined}],7:[function(require,module,exports){
-'use strict';
-
-var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
-
-Object.defineProperty(exports, "__esModule", {
-  value: true
-});
-exports.CONN_STATUS = undefined;
-
-var _try2 = require('fast.js/function/try');
-
-var _try3 = _interopRequireDefault(_try2);
-
-var _bind2 = require('fast.js/function/bind');
-
-var _bind3 = _interopRequireDefault(_bind2);
-
-var _HeartbeatManager = require('./HeartbeatManager');
-
-var _HeartbeatManager2 = _interopRequireDefault(_HeartbeatManager);
-
-function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
-
-function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
-
-function _possibleConstructorReturn(self, call) { if (!self) { throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); } return call && (typeof call === "object" || typeof call === "function") ? call : self; }
-
-function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function, not " + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; }
-
-var EventEmitter = typeof window !== 'undefined' && window.Mars ? window.Mars.EventEmitter : require('marsdb').EventEmitter;
-var PromiseQueue = typeof window !== 'undefined' && window.Mars ? window.Mars.PromiseQueue : require('marsdb').PromiseQueue;
-var EJSON = typeof window !== 'undefined' && window.Mars ? window.Mars.EJSON : require('marsdb').EJSON;
-var Random = typeof window !== 'undefined' && window.Mars ? window.Mars.Random : require('marsdb').Random;
-
-// Status of a DDP connection
-var DDP_VERSION = 1;
-var HEARTBEAT_INTERVAL = 17500;
-var HEARTBEAT_TIMEOUT = 15000;
-var RECONNECT_INTERVAL = 5000;
-var CONN_STATUS = exports.CONN_STATUS = {
-  CONNECTING: 'CONNECTING',
-  CONNECTED: 'CONNECTED',
-  DISCONNECTED: 'DISCONNECTED'
-};
-
-var DDPConnection = function (_EventEmitter) {
-  _inherits(DDPConnection, _EventEmitter);
-
-  function DDPConnection(_ref) {
-    var url = _ref.url;
-    var _ref$socket = _ref.socket;
-    var socket = _ref$socket === undefined ? WebSocket : _ref$socket;
-    var _ref$autoReconnect = _ref.autoReconnect;
-    var autoReconnect = _ref$autoReconnect === undefined ? true : _ref$autoReconnect;
-
-    _classCallCheck(this, DDPConnection);
-
-    var _this = _possibleConstructorReturn(this, Object.getPrototypeOf(DDPConnection).call(this));
-
-    _this.url = url;
-    _this._queue = new PromiseQueue(1);
-    _this._sessionId = null;
-    _this._autoReconnect = autoReconnect;
-    _this._socket = socket;
-    _this._status = CONN_STATUS.DISCONNECTED;
-
-    _this._heartbeat = new _HeartbeatManager2.default(HEARTBEAT_INTERVAL, HEARTBEAT_TIMEOUT);
-    _this._heartbeat.on('timeout', (0, _bind3.default)(_this._handleHearbeatTimeout, _this));
-    _this._heartbeat.on('sendPing', (0, _bind3.default)(_this.sendPing, _this));
-    _this._heartbeat.on('sendPong', (0, _bind3.default)(_this.sendPong, _this));
-    _this.connect();
-    return _this;
-  }
-
-  /**
-   * Returns true if client is fully connected to a server
-   * @return {Boolean}
-   */
-
-  _createClass(DDPConnection, [{
-    key: 'sendMethod',
-
-    /**
-     * Sends a "method" message to the server with given
-     * parameters
-     * @param  {String} name
-     * @param  {String} params
-     * @param  {String} id
-     * @param  {String} randomSeed
-     */
-    value: function sendMethod(name) {
-      var params = arguments.length <= 1 || arguments[1] === undefined ? [] : arguments[1];
-      var id = arguments[2];
-      var randomSeed = arguments[3];
-
-      var msg = {
-        msg: 'method',
-        id: id,
-        method: name,
-        params: params
-      };
-      if (randomSeed) {
-        msg.randomSeed = randomSeed;
-      }
-      this._sendMessage(msg);
-    }
-
-    /**
-     * Send "sub" message to the server with given
-     * publusher name and parameters
-     * @param  {String} name
-     * @param  {Array} params
-     * @param  {String} id
-     */
-
-  }, {
-    key: 'sendSub',
-    value: function sendSub(name) {
-      var params = arguments.length <= 1 || arguments[1] === undefined ? [] : arguments[1];
-      var id = arguments[2];
-
-      this._sendMessage({
-        msg: 'sub',
-        id: id,
-        name: name,
-        params: params
-      });
-    }
-
-    /**
-     * Send "unsub" message to the server for given
-     * subscription id
-     * @param  {String} id
-     */
-
-  }, {
-    key: 'sendUnsub',
-    value: function sendUnsub(id) {
-      this._sendMessage({
-        msg: 'unsub',
-        id: id
-      });
-    }
-
-    /**
-     * Send a "ping" message with randomly generated ping id
-     */
-
-  }, {
-    key: 'sendPing',
-    value: function sendPing() {
-      this._sendMessage({
-        msg: 'ping',
-        id: Random.default().id(20)
-      });
-    }
-
-    /**
-     * Sends a "pong" message for given id of ping message
-     * @param  {String} id
-     */
-
-  }, {
-    key: 'sendPong',
-    value: function sendPong(id) {
-      this._sendMessage({
-        msg: 'pong',
-        id: id
-      });
-    }
-
-    /**
-     * Make a new WebSocket connection to the server
-     * if we are not connected yet (isDicsonnected).
-     * Returns true if connecting, false if already connectiong
-     * @returns {Boolean}
-     */
-
-  }, {
-    key: 'connect',
-    value: function connect() {
-      if (this.isDisconnected) {
-        this._rawConn = new this._socket(this.url);
-        this._rawConn.onopen = (0, _bind3.default)(this._handleOpen, this);
-        this._rawConn.onerror = (0, _bind3.default)(this._handleError, this);
-        this._rawConn.onclose = (0, _bind3.default)(this._handleClose, this);
-        this._rawConn.onmessage = (0, _bind3.default)(this._handleRawMessage, this);
-        this._setStatus(CONN_STATUS.CONNECTING);
-        return true;
-      }
-      return false;
-    }
-
-    /**
-     * Reconnect to the server with unlimited tries. A period
-     * of tries is 5 seconds. It reconnects only if not
-     * connected. It cancels previously scheduled `connect` by `reconnect`.
-     * Returns a function for canceling reconnection process or undefined
-     * if connection is not disconnected.
-     * @return {Function}
-     */
-
-  }, {
-    key: 'reconnect',
-    value: function reconnect() {
-      var _this2 = this;
-
-      if (this.isDisconnected) {
-        clearTimeout(this._reconnTimer);
-        this._reconnecting = true;
-        this._reconnTimer = setTimeout((0, _bind3.default)(this.connect, this), RECONNECT_INTERVAL);
-
-        return function () {
-          clearTimeout(_this2._reconnTimer);
-          _this2._reconnecting = false;
-          _this2.disconnect();
-        };
-      }
-    }
-
-    /**
-     * Close WebSocket connection. If autoReconnect is enabled
-     * (enabled by default), then after 5 sec reconnection will
-     * be initiated.
-     */
-
-  }, {
-    key: 'disconnect',
-    value: function disconnect() {
-      var _this3 = this;
-
-      (0, _try3.default)(function () {
-        return _this3._rawConn && _this3._rawConn.close();
-      });
-    }
-  }, {
-    key: '_handleOpen',
-    value: function _handleOpen() {
-      this._heartbeat.waitPing();
-      this._sendMessage({
-        msg: 'connect',
-        session: this._sessionId,
-        version: DDP_VERSION,
-        support: [DDP_VERSION]
-      });
-    }
-  }, {
-    key: '_handleConnectedMessage',
-    value: function _handleConnectedMessage(msg) {
-      if (!this.isConnected) {
-        this._setStatus(CONN_STATUS.CONNECTED, this._reconnecting);
-        this._sessionId = msg.session;
-        this._reconnecting = false;
-      }
-    }
-  }, {
-    key: '_handleClose',
-    value: function _handleClose() {
-      this._heartbeat._clearTimers();
-      this._setStatus(CONN_STATUS.DISCONNECTED);
-
-      if (this._autoReconnect) {
-        this._reconnecting = false;
-        this.reconnect();
-      }
-    }
-  }, {
-    key: '_handleHearbeatTimeout',
-    value: function _handleHearbeatTimeout() {
-      this.disconnect();
-    }
-  }, {
-    key: '_handleError',
-    value: function _handleError(error) {
-      this.emit('error', error);
-    }
-  }, {
-    key: '_handleRawMessage',
-    value: function _handleRawMessage(rawMsg) {
-      var _this4 = this;
-
-      return this._queue.add(function () {
-        var msgObj = EJSON.parse(rawMsg.data);
-        return _this4._processMessage(msgObj);
-      }).then(null, function (err) {
-        _this4._handleError(err);
-      });
-    }
-  }, {
-    key: '_processMessage',
-    value: function _processMessage(msg) {
-      switch (msg.msg) {
-        case 'connected':
-          return this._handleConnectedMessage(msg);
-        case 'ping':
-          return this._heartbeat.handlePing(msg);
-        case 'pong':
-          return this._heartbeat.handlePong(msg);
-        case 'removed':
-        case 'changed':
-        case 'added':
-        case 'updated':
-        case 'result':
-        case 'nosub':
-        case 'ready':
-        case 'error':
-          return this.emitAsync('message:' + msg.msg, msg);
-        default:
-          throw new Error('Unknown message type ' + msg.msg);
-      }
-    }
-  }, {
-    key: '_sendMessage',
-    value: function _sendMessage(msgObj) {
-      var _this5 = this;
-
-      var result = (0, _try3.default)(function () {
-        return _this5._rawConn.send(EJSON.stringify(msgObj));
-      });
-      if (result instanceof Error) {
-        this._handleError(result);
-      }
-    }
-  }, {
-    key: '_setStatus',
-    value: function _setStatus(status, a) {
-      this._status = status;
-      this.emit(('status:' + status).toLowerCase(), a);
-    }
-  }, {
-    key: 'isConnected',
-    get: function get() {
-      return this._status === CONN_STATUS.CONNECTED;
-    }
-
-    /**
-     * Returns true if client disconnected
-     * @return {Boolean}
-     */
-
-  }, {
-    key: 'isDisconnected',
-    get: function get() {
-      return this._status === CONN_STATUS.DISCONNECTED;
-    }
-  }]);
-
-  return DDPConnection;
-}(EventEmitter);
-
-exports.default = DDPConnection;
-},{"./HeartbeatManager":9,"fast.js/function/bind":21,"fast.js/function/try":23,"marsdb":undefined}],8:[function(require,module,exports){
-'use strict';
-
-var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
-
-Object.defineProperty(exports, "__esModule", {
-  value: true
-});
-
-var _bind2 = require('fast.js/function/bind');
-
-var _bind3 = _interopRequireDefault(_bind2);
-
-function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
-
-function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
-
-/**
- * Manager for handling processing and remote errors.
- * For now it is just print warning in a console.
- */
-
-var ErrorManager = function () {
-  function ErrorManager(connection) {
-    _classCallCheck(this, ErrorManager);
-
-    this.conn = connection;
-    connection.on('message:error', (0, _bind3.default)(this._handleError, this));
-    connection.on('error', (0, _bind3.default)(this._handleError, this));
-  }
-
-  _createClass(ErrorManager, [{
-    key: '_handleError',
-    value: function _handleError(error) {
-      if (error && error.message) {
-        console.warn(error.message + '\n' + error.stack);
-      } else {
-        console.warn(JSON.stringify(error));
-      }
-    }
-  }]);
-
-  return ErrorManager;
-}();
-
-exports.default = ErrorManager;
-},{"fast.js/function/bind":21}],9:[function(require,module,exports){
-'use strict';
-
-var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
-
-Object.defineProperty(exports, "__esModule", {
-  value: true
-});
-
-function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
-
-function _possibleConstructorReturn(self, call) { if (!self) { throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); } return call && (typeof call === "object" || typeof call === "function") ? call : self; }
-
-function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function, not " + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; }
-
-var EventEmitter = typeof window !== 'undefined' && window.Mars ? window.Mars.EventEmitter : require('marsdb').EventEmitter;
-
-/**
- * Manages a heartbeat with a client
- */
-
-var HeartbeatManager = function (_EventEmitter) {
-  _inherits(HeartbeatManager, _EventEmitter);
-
-  function HeartbeatManager() {
-    var pingTimeout = arguments.length <= 0 || arguments[0] === undefined ? 17500 : arguments[0];
-    var pongTimeout = arguments.length <= 1 || arguments[1] === undefined ? 10000 : arguments[1];
-
-    _classCallCheck(this, HeartbeatManager);
-
-    var _this = _possibleConstructorReturn(this, Object.getPrototypeOf(HeartbeatManager).call(this));
-
-    _this.pingTimeout = pingTimeout;
-    _this.pongTimeout = pongTimeout;
-    return _this;
-  }
-
-  _createClass(HeartbeatManager, [{
-    key: 'waitPing',
-    value: function waitPing() {
-      var _this2 = this;
-
-      this._clearTimers();
-      this.waitPingTimer = setTimeout(function () {
-        _this2.emit('sendPing');
-        _this2.waitPong();
-      }, this.pingTimeout);
-    }
-  }, {
-    key: 'waitPong',
-    value: function waitPong() {
-      var _this3 = this;
-
-      this._clearTimers();
-      this.waitPongTimer = setTimeout(function () {
-        return _this3.emit('timeout');
-      }, this.pongTimeout);
-    }
-  }, {
-    key: 'handlePing',
-    value: function handlePing(id) {
-      this._clearTimers();
-      this.emit('sendPong', id);
-      this.waitPing();
-    }
-  }, {
-    key: 'handlePong',
-    value: function handlePong() {
-      this._clearTimers();
-      this.waitPing();
-    }
-  }, {
-    key: '_clearTimers',
-    value: function _clearTimers() {
-      clearTimeout(this.waitPingTimer);
-      clearTimeout(this.waitPongTimer);
-    }
-  }]);
-
-  return HeartbeatManager;
-}(EventEmitter);
-
-exports.default = HeartbeatManager;
-},{"marsdb":undefined}],10:[function(require,module,exports){
-'use strict';
-
-var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
-
-Object.defineProperty(exports, "__esModule", {
-  value: true
-});
-
-function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
-
-function _possibleConstructorReturn(self, call) { if (!self) { throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); } return call && (typeof call === "object" || typeof call === "function") ? call : self; }
-
-function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function, not " + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; }
-
-var EventEmitter = typeof window !== 'undefined' && window.Mars ? window.Mars.EventEmitter : require('marsdb').EventEmitter;
-var Random = typeof window !== 'undefined' && window.Mars ? window.Mars.Random : require('marsdb').Random;
-
-// Method call statuses
-var CALL_STATUS = exports.CALL_STATUS = {
-  RESULT: 'RESULT',
-  ERROR: 'ERROR',
-  UPDATED: 'UPDATED'
-};
-
-/**
- * Class for tracking method call status.
- */
-
-var MethodCall = function (_EventEmitter) {
-  _inherits(MethodCall, _EventEmitter);
-
-  function MethodCall(method, params, randomSeed, connection) {
-    _classCallCheck(this, MethodCall);
-
-    var _this = _possibleConstructorReturn(this, Object.getPrototypeOf(MethodCall).call(this));
-
-    _this.result = function () {
-      return _this._promiseMixed(new Promise(function (resolve, reject) {
-        if (_this._error) {
-          reject(_this._error);
-        } else if (_this._result) {
-          resolve(_this._result);
-        } else {
-          _this.once(CALL_STATUS.RESULT, resolve);
-          _this.once(CALL_STATUS.ERROR, reject);
-        }
-      }));
-    };
-
-    _this.updated = function () {
-      return _this._promiseMixed(new Promise(function (resolve, reject) {
-        if (_this._updated) {
-          resolve();
-        } else {
-          _this.once(CALL_STATUS.UPDATED, resolve);
-        }
-      }));
-    };
-
-    _this.id = Random.default().id(20);
-    connection.sendMethod(method, params, _this.id, randomSeed);
-    return _this;
-  }
-
-  /**
-   * Returns a promise that will be resolved when result
-   * of funciton call is received. It is also have "result"
-   * and "updated" fields for chaining
-   * @return {Promise}
-   */
-
-  /**
-   * Returns a promise that will be resolved when updated
-   * message received for given funciton call. It is also
-   * have "result" and "updated" fields for chaining.
-   * @return {Promise}
-   */
-
-  _createClass(MethodCall, [{
-    key: 'then',
-    value: function then(succFn, failFn) {
-      var _this2 = this;
-
-      return this.updated().then(function () {
-        return _this2.result().then(succFn, failFn);
-      }, failFn);
-    }
-  }, {
-    key: '_promiseMixed',
-    value: function _promiseMixed(promise) {
-      var _this3 = this;
-
-      return {
-        result: this.result,
-        updated: this.updated,
-        then: function then() {
-          return _this3._promiseMixed(promise.then.apply(promise, arguments));
-        }
-      };
-    }
-  }, {
-    key: '_handleResult',
-    value: function _handleResult(error, result) {
-      if (error) {
-        this._error = error;
-        this.emit(CALL_STATUS.ERROR, error);
-      } else {
-        this._result = result;
-        this.emit(CALL_STATUS.RESULT, result);
-      }
-    }
-  }, {
-    key: '_handleUpdated',
-    value: function _handleUpdated(msg) {
-      this._updated = true;
-      this.emit(CALL_STATUS.UPDATED);
-    }
-  }]);
-
-  return MethodCall;
-}(EventEmitter);
-
-exports.default = MethodCall;
-},{"marsdb":undefined}],11:[function(require,module,exports){
-'use strict';
-
-var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
-
-Object.defineProperty(exports, "__esModule", {
-  value: true
-});
-
-var _bind2 = require('fast.js/function/bind');
-
-var _bind3 = _interopRequireDefault(_bind2);
-
-var _forEach = require('fast.js/forEach');
-
-var _forEach2 = _interopRequireDefault(_forEach);
-
-var _MethodCall = require('./MethodCall');
-
-var _MethodCall2 = _interopRequireDefault(_MethodCall);
-
-function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
-
-function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
-
-/**
- * Make an RPC calls and track results.
- * Track a DDP connection for canceling active
- * methods calls.
- */
-
-var MethodCallManager = function () {
-  function MethodCallManager(connection) {
-    _classCallCheck(this, MethodCallManager);
-
-    this.conn = connection;
-    this._methods = {};
-
-    connection.on('status:disconnected', (0, _bind3.default)(this._handleDisconnected, this));
-    connection.on('message:result', (0, _bind3.default)(this._handleMethodResult, this));
-    connection.on('message:updated', (0, _bind3.default)(this._handleMethodUpdated, this));
-  }
-
-  /**
-   * Call a Meteor method
-   * @param  {String} method
-   * @param  {...}    param1, param2, ..
-   * @return {MethodCall}
-   */
-
-  _createClass(MethodCallManager, [{
-    key: 'call',
-    value: function call(method) {
-      for (var _len = arguments.length, params = Array(_len > 1 ? _len - 1 : 0), _key = 1; _key < _len; _key++) {
-        params[_key - 1] = arguments[_key];
-      }
-
-      return this.apply(method, params);
-    }
-
-    /**
-     * Apply a method with given parameters and
-     * randomSeed
-     * @param  {String} method
-     * @param  {Array} params
-     * @param  {String} randomSeed
-     * @return {MethodCall}
-     */
-
-  }, {
-    key: 'apply',
-    value: function apply(method) {
-      var _this = this;
-
-      var params = arguments.length <= 1 || arguments[1] === undefined ? [] : arguments[1];
-      var randomSeed = arguments[2];
-
-      var call = new _MethodCall2.default(method, params, randomSeed, this.conn);
-      this._methods[call.id] = call;
-
-      var cleanupCallback = function cleanupCallback() {
-        if (_this._methods[call.id] && _this._methods[call.id]._result && _this._methods[call.id]._updated) {
-          delete _this._methods[call.id];
-        }
-      };
-      call.result().then(cleanupCallback).updated().then(cleanupCallback);
-
-      return call;
-    }
-  }, {
-    key: '_handleMethodResult',
-    value: function _handleMethodResult(msg) {
-      if (msg.id && this._methods[msg.id]) {
-        var result = msg.result;
-        var error = msg.error;
-
-        this._methods[msg.id]._handleResult(error, result);
-      }
-    }
-  }, {
-    key: '_handleMethodUpdated',
-    value: function _handleMethodUpdated(msg) {
-      var _this2 = this;
-
-      (0, _forEach2.default)(msg.methods, function (mid) {
-        if (_this2._methods[mid]) {
-          _this2._methods[mid]._handleUpdated();
-        }
-      });
-    }
-  }, {
-    key: '_handleDisconnected',
-    value: function _handleDisconnected() {
-      (0, _forEach2.default)(this._methods, function (methodCall) {
-        methodCall._handleResult({
-          reason: 'Disconnected, method can\'t be done'
-        });
-      });
-      this._methods = {};
-    }
-  }]);
-
-  return MethodCallManager;
-}();
-
-exports.default = MethodCallManager;
-},{"./MethodCall":10,"fast.js/forEach":18,"fast.js/function/bind":21}],12:[function(require,module,exports){
-'use strict';
-
-var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
-
-Object.defineProperty(exports, "__esModule", {
-  value: true
-});
-
-function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
-
-function _possibleConstructorReturn(self, call) { if (!self) { throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); } return call && (typeof call === "object" || typeof call === "function") ? call : self; }
-
-function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function, not " + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; }
-
-var EventEmitter = typeof window !== 'undefined' && window.Mars ? window.Mars.EventEmitter : require('marsdb').EventEmitter;
-var Random = typeof window !== 'undefined' && window.Mars ? window.Mars.Random : require('marsdb').Random;
-
-// Status of the subsctiption
-var SUB_STATUS = exports.SUB_STATUS = {
-  READY_PENDING: 'READY_PENDING',
-  READY: 'READY',
-  ERROR: 'ERROR',
-  STOP_PENDING: 'STOP_PENDING',
-  STOPPED: 'STOPPED',
-  FROZEN: 'FROZEN'
-};
-
-/**
- * Class for storing Subscription with
- * delayed pending feature.
- */
-
-var Subscription = function (_EventEmitter) {
-  _inherits(Subscription, _EventEmitter);
-
-  function Subscription(name, params, conn) {
-    var stopWaitTimeout = arguments.length <= 3 || arguments[3] === undefined ? 15000 : arguments[3];
-
-    _classCallCheck(this, Subscription);
-
-    var _this = _possibleConstructorReturn(this, Object.getPrototypeOf(Subscription).call(this));
-
-    _this.ready = function () {
-      return _this._promiseMixed(new Promise(function (resolve, reject) {
-        if (_this.isReady) {
-          resolve();
-        } else {
-          _this.once(SUB_STATUS.READY, resolve);
-          _this.once(SUB_STATUS.ERROR, reject);
-        }
-      }));
-    };
-
-    _this.stopped = function () {
-      return _this._promiseMixed(new Promise(function (resolve, reject) {
-        if (_this.isStopped) {
-          resolve();
-        } else {
-          _this.once(SUB_STATUS.STOPPED, resolve);
-          _this.once(SUB_STATUS.ERROR, reject);
-        }
-      }));
-    };
-
-    _this.stop = function () {
-      _this._scheduleStop();
-    };
-
-    _this.id = Random.default().id(20);
-    _this.name = name;
-    _this.params = params;
-    _this._conn = conn;
-    _this._ready = false;
-    _this._stopWaitTimeout = stopWaitTimeout;
-    return _this;
-  }
-
-  _createClass(Subscription, [{
-    key: 'then',
-    value: function then(succFn, failFn) {
-      return this.ready().then(succFn, failFn);
-    }
-  }, {
-    key: '_promiseMixed',
-    value: function _promiseMixed(promise) {
-      var _this2 = this;
-
-      return {
-        stopped: this.stopped,
-        ready: this.ready,
-        stop: this.stop,
-        then: function then() {
-          return _this2._promiseMixed(promise.then.apply(promise, arguments));
-        }
-      };
-    }
-  }, {
-    key: '_subscribe',
-    value: function _subscribe() {
-      if (!this.status || this.status === SUB_STATUS.STOP_PENDING || this.status === SUB_STATUS.STOPPED || this.status === SUB_STATUS.ERROR || this.status === SUB_STATUS.FROZEN) {
-        if (this.status === SUB_STATUS.STOP_PENDING) {
-          if (this._ready) {
-            this._clearStopper();
-            this._setStatus(SUB_STATUS.READY);
-          } else {
-            this._setStatus(SUB_STATUS.READY_PENDING);
-          }
-        } else {
-          this._setStatus(SUB_STATUS.READY_PENDING);
-          this._conn.sendSub(this.name, this.params, this.id);
-        }
-      }
-    }
-  }, {
-    key: '_scheduleStop',
-    value: function _scheduleStop() {
-      var _this3 = this;
-
-      if (this.status !== SUB_STATUS.STOP_PENDING && this.status !== SUB_STATUS.STOPPED) {
-        this._setStatus(SUB_STATUS.STOP_PENDING);
-        this._stopTimer = setTimeout(function () {
-          return _this3._stopImmediately();
-        }, this._stopWaitTimeout);
-      }
-    }
-  }, {
-    key: '_stopImmediately',
-    value: function _stopImmediately(options) {
-      if (this.status !== SUB_STATUS.STOPPED) {
-        this._clearStopper();
-        this._setStatus(SUB_STATUS.STOPPED);
-        this._ready = false;
-
-        if (!options || !options.dontSendMsg) {
-          this._conn.sendUnsub(this.id);
-        }
-      }
-    }
-  }, {
-    key: '_freeze',
-    value: function _freeze() {
-      if (this.status === SUB_STATUS.STOP_PENDING) {
-        this._stopImmediately({ dontSendMsg: true });
-      } else if (!this.status || this.status !== SUB_STATUS.STOPPED) {
-        this._setStatus(SUB_STATUS.FROZEN);
-      }
-    }
-  }, {
-    key: '_setStatus',
-    value: function _setStatus(status, a, b, c, d) {
-      this.status = status;
-      this.emit(status, a, b, c, d);
-    }
-  }, {
-    key: '_clearStopper',
-    value: function _clearStopper() {
-      clearTimeout(this._stopTimer);
-      this._stopTimer = null;
-    }
-  }, {
-    key: '_handleNosub',
-    value: function _handleNosub(error) {
-      this._clearStopper();
-      if (error) {
-        this._setStatus(SUB_STATUS.ERROR, error);
-      } else {
-        this._stopImmediately({ dontSendMsg: true });
-      }
-    }
-  }, {
-    key: '_handleReady',
-    value: function _handleReady() {
-      if (this.status !== SUB_STATUS.STOPPED && this.status !== SUB_STATUS.STOP_PENDING) {
-        this._ready = true;
-        this._setStatus(SUB_STATUS.READY);
-      }
-    }
-  }, {
-    key: 'isReady',
-    get: function get() {
-      return this.status == SUB_STATUS.READY || this.status === SUB_STATUS.FROZEN && this._ready;
-    }
-  }, {
-    key: 'isReadyPending',
-    get: function get() {
-      return this.status === SUB_STATUS.READY_PENDING;
-    }
-  }, {
-    key: 'isStopped',
-    get: function get() {
-      return this.status === SUB_STATUS.STOPPED;
-    }
-  }, {
-    key: 'isStopPending',
-    get: function get() {
-      return this.status === SUB_STATUS.STOP_PENDING;
-    }
-  }, {
-    key: 'isFaulted',
-    get: function get() {
-      return this.status === SUB_STATUS.ERROR;
-    }
-  }, {
-    key: 'isFrozen',
-    get: function get() {
-      return this.status == SUB_STATUS.FROZEN;
-    }
-  }]);
-
-  return Subscription;
-}(EventEmitter);
-
-exports.default = Subscription;
-},{"marsdb":undefined}],13:[function(require,module,exports){
-'use strict';
-
-var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
-
-Object.defineProperty(exports, "__esModule", {
-  value: true
-});
-
-var _bind2 = require('fast.js/function/bind');
-
-var _bind3 = _interopRequireDefault(_bind2);
-
-var _forEach = require('fast.js/forEach');
-
-var _forEach2 = _interopRequireDefault(_forEach);
-
-var _Subscription = require('./Subscription');
-
-var _Subscription2 = _interopRequireDefault(_Subscription);
-
-function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
-
-function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
-
-function _possibleConstructorReturn(self, call) { if (!self) { throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); } return call && (typeof call === "object" || typeof call === "function") ? call : self; }
-
-function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function, not " + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; }
-
-var EventEmitter = typeof window !== 'undefined' && window.Mars ? window.Mars.EventEmitter : require('marsdb').EventEmitter;
-
-// Internals
-var STOP_SUB_DELAY = 15000;
-
-/**
- * The manager tracks all subscriptions on the application
- * and make reaction on some life-cycle events, like stop
- * subscription.
- */
-
-var SubscriptionManager = function (_EventEmitter) {
-  _inherits(SubscriptionManager, _EventEmitter);
-
-  function SubscriptionManager(connection) {
-    _classCallCheck(this, SubscriptionManager);
-
-    var _this = _possibleConstructorReturn(this, Object.getPrototypeOf(SubscriptionManager).call(this));
-
-    _this._subs = {};
-    _this._loading = new Set();
-    _this._conn = connection;
-
-    connection.on('status:connected', (0, _bind3.default)(_this._handleConnected, _this));
-    connection.on('status:disconnected', (0, _bind3.default)(_this._handleDisconnected, _this));
-    connection.on('message:ready', (0, _bind3.default)(_this._handleSubscriptionReady, _this));
-    connection.on('message:nosub', (0, _bind3.default)(_this._handleSubscriptionNosub, _this));
-    return _this;
-  }
-
-  /**
-   * Subscribe to publisher by given name with params.
-   * Return Subscription object with stop, ready, and stopped
-   * methods.
-   * @param  {String}    name
-   * @param  {...Mixed}  params
-   * @return {Subscription}
-   */
-
-  _createClass(SubscriptionManager, [{
-    key: 'subscribe',
-    value: function subscribe(name) {
-      var _this2 = this;
-
-      for (var _len = arguments.length, params = Array(_len > 1 ? _len - 1 : 0), _key = 1; _key < _len; _key++) {
-        params[_key - 1] = arguments[_key];
-      }
-
-      // Create and register subscription
-      var sub = new _Subscription2.default(name, params, this._conn, STOP_SUB_DELAY);
-      this._subs[sub.id] = sub;
-      this._trackLoadingStart(sub.id);
-
-      // Remove sub from manager on stop or error
-      var cleanupCallback = function cleanupCallback() {
-        delete _this2._subs[sub.id];
-        _this2._trackLoadingReady(sub.id);
-      };
-      sub.once(_Subscription.SUB_STATUS.STOPPED, cleanupCallback);
-      sub.once(_Subscription.SUB_STATUS.ERROR, cleanupCallback);
-
-      // Start subscription
-      if (this._conn.isConnected) {
-        sub._subscribe();
-      } else {
-        sub._freeze();
-      }
-
-      return sub;
-    }
-
-    /**
-     * Given callback invoked anytime when all
-     * subscriptions is ready. Return a function for
-     * stop watching the event.
-     * @return {Function}
-     */
-
-  }, {
-    key: 'addReadyListener',
-    value: function addReadyListener(cb) {
-      var _this3 = this;
-
-      this.on('ready', cb);
-      return function () {
-        return _this3.removeListener('ready', cb);
-      };
-    }
-
-    /**
-     * Given callback invoked when first subscription started.
-     * It is not invoked for any other new subs if some sub
-     * is loading.
-     * @return {Function}
-     */
-
-  }, {
-    key: 'addLoadingListener',
-    value: function addLoadingListener(cb) {
-      var _this4 = this;
-
-      this.on('loading', cb);
-      return function () {
-        return _this4.removeListener('loading', cb);
-      };
-    }
-  }, {
-    key: '_handleConnected',
-    value: function _handleConnected() {
-      (0, _forEach2.default)(this._subs, function (sub) {
-        return sub._subscribe();
-      });
-    }
-  }, {
-    key: '_handleDisconnected',
-    value: function _handleDisconnected() {
-      var _this5 = this;
-
-      (0, _forEach2.default)(this._subs, function (sub, sid) {
-        sub._freeze();
-        if (sub.isFrozen) {
-          _this5._trackLoadingStart(sid);
-        } else {
-          _this5._trackLoadingReady(sid);
-        }
-      });
-    }
-  }, {
-    key: '_handleSubscriptionReady',
-    value: function _handleSubscriptionReady(msg) {
-      var _this6 = this;
-
-      (0, _forEach2.default)(msg.subs, function (sid) {
-        var sub = _this6._subs[sid];
-        if (sub) {
-          sub._handleReady();
-          _this6._trackLoadingReady(sid);
-        }
-      });
-    }
-  }, {
-    key: '_handleSubscriptionNosub',
-    value: function _handleSubscriptionNosub(msg) {
-      var sub = this._subs[msg.id];
-      if (sub) {
-        sub._handleNosub(msg.error);
-      }
-    }
-  }, {
-    key: '_trackLoadingStart',
-    value: function _trackLoadingStart(subId) {
-      var prevSize = this._loading.size;
-      this._loading.add(subId);
-      if (prevSize === 0 && this._loading.size > 0) {
-        this.emit('loading');
-      }
-    }
-  }, {
-    key: '_trackLoadingReady',
-    value: function _trackLoadingReady(subId) {
-      var prevSize = this._loading.size;
-      this._loading.delete(subId);
-      if (prevSize > 0 && this._loading.size === 0) {
-        this.emit('ready');
-      }
-    }
-  }]);
-
-  return SubscriptionManager;
-}(EventEmitter);
-
-exports.default = SubscriptionManager;
-},{"./Subscription":12,"fast.js/forEach":18,"fast.js/function/bind":21,"marsdb":undefined}],14:[function(require,module,exports){
-'use strict';
-
-Object.defineProperty(exports, "__esModule", {
-  value: true
-});
-exports.getConnection = getConnection;
-exports.call = call;
-exports.apply = apply;
-exports.subscribe = subscribe;
-exports.configure = configure;
-
-var _map2 = require('fast.js/map');
-
-var _map3 = _interopRequireDefault(_map2);
-
-var _invariant = require('invariant');
-
-var _invariant2 = _interopRequireDefault(_invariant);
-
-var _DDPConnection = require('./DDPConnection');
-
-var _DDPConnection2 = _interopRequireDefault(_DDPConnection);
-
-var _SubscriptionManager = require('./SubscriptionManager');
-
-var _SubscriptionManager2 = _interopRequireDefault(_SubscriptionManager);
-
-var _MethodCallManager = require('./MethodCallManager');
-
-var _MethodCallManager2 = _interopRequireDefault(_MethodCallManager);
-
-var _ErrorManager = require('./ErrorManager');
-
-var _ErrorManager2 = _interopRequireDefault(_ErrorManager);
-
-var _CollectionManager = require('./CollectionManager');
-
-var _CursorWithSub = require('./CursorWithSub');
-
-function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
-
-var Collection = typeof window !== 'undefined' && window.Mars ? window.Mars.Collection : require('marsdb').Collection;
-
-// Internals
-var _connection = null;
-
-function getConnection() {
-  return _connection;
-}
-
-function call() {
-  var _connection$methodMan;
-
-  return (_connection$methodMan = _connection.methodManager).call.apply(_connection$methodMan, arguments);
-}
-
-function apply() {
-  var _connection$methodMan2;
-
-  return (_connection$methodMan2 = _connection.methodManager).apply.apply(_connection$methodMan2, arguments);
-}
-
-function subscribe() {
-  var _connection$subManage;
-
-  return (_connection$subManage = _connection.subManager).subscribe.apply(_connection$subManage, arguments);
-}
-
-function configure(_ref) {
-  var url = _ref.url;
-  var _ref$managers = _ref.managers;
-  var managers = _ref$managers === undefined ? [] : _ref$managers;
-  var _ref$socket = _ref.socket;
-  var socket = _ref$socket === undefined ? WebSocket : _ref$socket;
-
-  (0, _invariant2.default)(!_connection, 'configure(...): connection already configured');
-
-  _connection = new _DDPConnection2.default({ url: url, socket: socket });
-  _connection.subManager = new _SubscriptionManager2.default(_connection);
-  _connection.methodManager = new _MethodCallManager2.default(_connection);
-  _connection.errorManager = new _ErrorManager2.default(_connection);
-  _connection.customManagers = (0, _map3.default)(managers, function (x) {
-    return new x(_connection);
-  });
-  Collection.defaultDelegate((0, _CollectionManager.createCollectionDelegate)(_connection));
-  Collection.defaultCursor((0, _CursorWithSub.createCursorWithSub)(_connection));
-  return _connection;
-}
-},{"./CollectionManager":5,"./CursorWithSub":6,"./DDPConnection":7,"./ErrorManager":8,"./MethodCallManager":11,"./SubscriptionManager":13,"fast.js/map":24,"invariant":28,"marsdb":undefined}],15:[function(require,module,exports){
-const client = require('./dist');
-module.exports = {
-  configure: client.configure,
-  apply: client.apply,
-  call: client.call,
-  subscribe: client.subsctibe,
-};
-
-},{"./dist":14}],16:[function(require,module,exports){
-'use strict';
-
-var bindInternal3 = require('../function/bindInternal3');
-
-/**
- * # For Each
+},{"./dist/client":3}],6:[function(require,module,exports){
+(function (global){
+/*
+ * js-sha256 v0.3.0
+ * https://github.com/emn178/js-sha256
  *
- * A fast `.forEach()` implementation.
+ * Copyright 2014-2015, emn178@gmail.com
  *
- * @param  {Array}    subject     The array (or array-like) to iterate over.
- * @param  {Function} fn          The visitor function.
- * @param  {Object}   thisContext The context for the visitor.
+ * Licensed under the MIT license:
+ * http://www.opensource.org/licenses/MIT
  */
-module.exports = function fastForEach (subject, fn, thisContext) {
-  var length = subject.length,
-      iterator = thisContext !== undefined ? bindInternal3(fn, thisContext) : fn,
-      i;
-  for (i = 0; i < length; i++) {
-    iterator(subject[i], i, subject);
+;(function(root, undefined) {
+  'use strict';
+
+  var NODE_JS = typeof(module) != 'undefined';
+  if(NODE_JS) {
+    root = global;
   }
-};
+  var TYPED_ARRAY = typeof(Uint8Array) != 'undefined';
+  var HEX_CHARS = '0123456789abcdef'.split('');
+  var EXTRA = [-2147483648, 8388608, 32768, 128];
+  var SHIFT = [24, 16, 8, 0];
+  var K =[0x428a2f98, 0x71374491, 0xb5c0fbcf, 0xe9b5dba5, 0x3956c25b, 0x59f111f1, 0x923f82a4, 0xab1c5ed5,
+          0xd807aa98, 0x12835b01, 0x243185be, 0x550c7dc3, 0x72be5d74, 0x80deb1fe, 0x9bdc06a7, 0xc19bf174,
+          0xe49b69c1, 0xefbe4786, 0x0fc19dc6, 0x240ca1cc, 0x2de92c6f, 0x4a7484aa, 0x5cb0a9dc, 0x76f988da,
+          0x983e5152, 0xa831c66d, 0xb00327c8, 0xbf597fc7, 0xc6e00bf3, 0xd5a79147, 0x06ca6351, 0x14292967,
+          0x27b70a85, 0x2e1b2138, 0x4d2c6dfc, 0x53380d13, 0x650a7354, 0x766a0abb, 0x81c2c92e, 0x92722c85,
+          0xa2bfe8a1, 0xa81a664b, 0xc24b8b70, 0xc76c51a3, 0xd192e819, 0xd6990624, 0xf40e3585, 0x106aa070,
+          0x19a4c116, 0x1e376c08, 0x2748774c, 0x34b0bcb5, 0x391c0cb3, 0x4ed8aa4a, 0x5b9cca4f, 0x682e6ff3,
+          0x748f82ee, 0x78a5636f, 0x84c87814, 0x8cc70208, 0x90befffa, 0xa4506ceb, 0xbef9a3f7, 0xc67178f2];
 
-},{"../function/bindInternal3":22}],17:[function(require,module,exports){
-'use strict';
+  var blocks = [];
 
-var bindInternal3 = require('../function/bindInternal3');
-
-/**
- * # Map
- *
- * A fast `.map()` implementation.
- *
- * @param  {Array}    subject     The array (or array-like) to map over.
- * @param  {Function} fn          The mapper function.
- * @param  {Object}   thisContext The context for the mapper.
- * @return {Array}                The array containing the results.
- */
-module.exports = function fastMap (subject, fn, thisContext) {
-  var length = subject.length,
-      result = new Array(length),
-      iterator = thisContext !== undefined ? bindInternal3(fn, thisContext) : fn,
-      i;
-  for (i = 0; i < length; i++) {
-    result[i] = iterator(subject[i], i, subject);
-  }
-  return result;
-};
-
-},{"../function/bindInternal3":22}],18:[function(require,module,exports){
-'use strict';
-
-var forEachArray = require('./array/forEach'),
-    forEachObject = require('./object/forEach');
-
-/**
- * # ForEach
- *
- * A fast `.forEach()` implementation.
- *
- * @param  {Array|Object} subject     The array or object to iterate over.
- * @param  {Function}     fn          The visitor function.
- * @param  {Object}       thisContext The context for the visitor.
- */
-module.exports = function fastForEach (subject, fn, thisContext) {
-  if (subject instanceof Array) {
-    return forEachArray(subject, fn, thisContext);
-  }
-  else {
-    return forEachObject(subject, fn, thisContext);
-  }
-};
-},{"./array/forEach":16,"./object/forEach":25}],19:[function(require,module,exports){
-'use strict';
-
-/**
- * Internal helper for applying a function without a context.
- */
-module.exports = function applyNoContext (subject, args) {
-  switch (args.length) {
-    case 0:
-      return subject();
-    case 1:
-      return subject(args[0]);
-    case 2:
-      return subject(args[0], args[1]);
-    case 3:
-      return subject(args[0], args[1], args[2]);
-    case 4:
-      return subject(args[0], args[1], args[2], args[3]);
-    case 5:
-      return subject(args[0], args[1], args[2], args[3], args[4]);
-    case 6:
-      return subject(args[0], args[1], args[2], args[3], args[4], args[5]);
-    case 7:
-      return subject(args[0], args[1], args[2], args[3], args[4], args[5], args[6]);
-    case 8:
-      return subject(args[0], args[1], args[2], args[3], args[4], args[5], args[6], args[7]);
-    default:
-      return subject.apply(undefined, args);
-  }
-};
-
-},{}],20:[function(require,module,exports){
-'use strict';
-
-/**
- * Internal helper for applying a function with a context.
- */
-module.exports = function applyWithContext (subject, thisContext, args) {
-  switch (args.length) {
-    case 0:
-      return subject.call(thisContext);
-    case 1:
-      return subject.call(thisContext, args[0]);
-    case 2:
-      return subject.call(thisContext, args[0], args[1]);
-    case 3:
-      return subject.call(thisContext, args[0], args[1], args[2]);
-    case 4:
-      return subject.call(thisContext, args[0], args[1], args[2], args[3]);
-    case 5:
-      return subject.call(thisContext, args[0], args[1], args[2], args[3], args[4]);
-    case 6:
-      return subject.call(thisContext, args[0], args[1], args[2], args[3], args[4], args[5]);
-    case 7:
-      return subject.call(thisContext, args[0], args[1], args[2], args[3], args[4], args[5], args[6]);
-    case 8:
-      return subject.call(thisContext, args[0], args[1], args[2], args[3], args[4], args[5], args[6], args[7]);
-    default:
-      return subject.apply(thisContext, args);
-  }
-};
-
-},{}],21:[function(require,module,exports){
-'use strict';
-
-var applyWithContext = require('./applyWithContext');
-var applyNoContext = require('./applyNoContext');
-
-/**
- * # Bind
- * Analogue of `Function::bind()`.
- *
- * ```js
- * var bind = require('fast.js').bind;
- * var bound = bind(myfunc, this, 1, 2, 3);
- *
- * bound(4);
- * ```
- *
- *
- * @param  {Function} fn          The function which should be bound.
- * @param  {Object}   thisContext The context to bind the function to.
- * @param  {mixed}    args, ...   Additional arguments to pre-bind.
- * @return {Function}             The bound function.
- */
-module.exports = function fastBind (fn, thisContext) {
-  var boundLength = arguments.length - 2,
-      boundArgs;
-
-  if (boundLength > 0) {
-    boundArgs = new Array(boundLength);
-    for (var i = 0; i < boundLength; i++) {
-      boundArgs[i] = arguments[i + 2];
-    }
-    if (thisContext !== undefined) {
-      return function () {
-        var length = arguments.length,
-            args = new Array(boundLength + length),
-            i;
-        for (i = 0; i < boundLength; i++) {
-          args[i] = boundArgs[i];
-        }
-        for (i = 0; i < length; i++) {
-          args[boundLength + i] = arguments[i];
-        }
-        return applyWithContext(fn, thisContext, args);
-      };
-    }
-    else {
-      return function () {
-        var length = arguments.length,
-            args = new Array(boundLength + length),
-            i;
-        for (i = 0; i < boundLength; i++) {
-          args[i] = boundArgs[i];
-        }
-        for (i = 0; i < length; i++) {
-          args[boundLength + i] = arguments[i];
-        }
-        return applyNoContext(fn, args);
-      };
-    }
-  }
-  if (thisContext !== undefined) {
-    return function () {
-      return applyWithContext(fn, thisContext, arguments);
-    };
-  }
-  else {
-    return function () {
-      return applyNoContext(fn, arguments);
-    };
-  }
-};
-
-},{"./applyNoContext":19,"./applyWithContext":20}],22:[function(require,module,exports){
-'use strict';
-
-/**
- * Internal helper to bind a function known to have 3 arguments
- * to a given context.
- */
-module.exports = function bindInternal3 (func, thisContext) {
-  return function (a, b, c) {
-    return func.call(thisContext, a, b, c);
+  var sha224 = function(message) {
+    return sha256(message, true);
   };
-};
 
-},{}],23:[function(require,module,exports){
-'use strict';
-
-/**
- * # Try
- *
- * Allows functions to be optimised by isolating `try {} catch (e) {}` blocks
- * outside the function declaration. Returns either the result of the function or an Error
- * object if one was thrown. The caller should then check for `result instanceof Error`.
- *
- * ```js
- * var result = fast.try(myFunction);
- * if (result instanceof Error) {
- *    console.log('something went wrong');
- * }
- * else {
- *   console.log('result:', result);
- * }
- * ```
- *
- * @param  {Function} fn The function to invoke.
- * @return {mixed}       The result of the function, or an `Error` object.
- */
-module.exports = function fastTry (fn) {
-  try {
-    return fn();
-  }
-  catch (e) {
-    if (!(e instanceof Error)) {
-      return new Error(e);
-    }
-    else {
-      return e;
-    }
-  }
-};
-
-},{}],24:[function(require,module,exports){
-'use strict';
-
-var mapArray = require('./array/map'),
-    mapObject = require('./object/map');
-
-/**
- * # Map
- *
- * A fast `.map()` implementation.
- *
- * @param  {Array|Object} subject     The array or object to map over.
- * @param  {Function}     fn          The mapper function.
- * @param  {Object}       thisContext The context for the mapper.
- * @return {Array|Object}             The array or object containing the results.
- */
-module.exports = function fastMap (subject, fn, thisContext) {
-  if (subject instanceof Array) {
-    return mapArray(subject, fn, thisContext);
-  }
-  else {
-    return mapObject(subject, fn, thisContext);
-  }
-};
-},{"./array/map":17,"./object/map":27}],25:[function(require,module,exports){
-'use strict';
-
-var bindInternal3 = require('../function/bindInternal3');
-
-/**
- * # For Each
- *
- * A fast object `.forEach()` implementation.
- *
- * @param  {Object}   subject     The object to iterate over.
- * @param  {Function} fn          The visitor function.
- * @param  {Object}   thisContext The context for the visitor.
- */
-module.exports = function fastForEachObject (subject, fn, thisContext) {
-  var keys = Object.keys(subject),
-      length = keys.length,
-      iterator = thisContext !== undefined ? bindInternal3(fn, thisContext) : fn,
-      key, i;
-  for (i = 0; i < length; i++) {
-    key = keys[i];
-    iterator(subject[key], key, subject);
-  }
-};
-
-},{"../function/bindInternal3":22}],26:[function(require,module,exports){
-'use strict';
-
-/**
- * Object.keys() shim for ES3 environments.
- *
- * @param  {Object} obj The object to get keys for.
- * @return {Array}      The array of keys.
- */
-module.exports = typeof Object.keys === "function" ? Object.keys : /* istanbul ignore next */ function fastKeys (obj) {
-  var keys = [];
-  for (var key in obj) {
-    if (Object.prototype.hasOwnProperty.call(obj, key)) {
-      keys.push(key);
-    }
-  }
-  return keys;
-};
-},{}],27:[function(require,module,exports){
-'use strict';
-
-var bindInternal3 = require('../function/bindInternal3');
-
-/**
- * # Map
- *
- * A fast object `.map()` implementation.
- *
- * @param  {Object}   subject     The object to map over.
- * @param  {Function} fn          The mapper function.
- * @param  {Object}   thisContext The context for the mapper.
- * @return {Object}               The new object containing the results.
- */
-module.exports = function fastMapObject (subject, fn, thisContext) {
-  var keys = Object.keys(subject),
-      length = keys.length,
-      result = {},
-      iterator = thisContext !== undefined ? bindInternal3(fn, thisContext) : fn,
-      i, key;
-  for (i = 0; i < length; i++) {
-    key = keys[i];
-    result[key] = iterator(subject[key], key, subject);
-  }
-  return result;
-};
-
-},{"../function/bindInternal3":22}],28:[function(require,module,exports){
-/**
- * Copyright 2013-2015, Facebook, Inc.
- * All rights reserved.
- *
- * This source code is licensed under the BSD-style license found in the
- * LICENSE file in the root directory of this source tree. An additional grant
- * of patent rights can be found in the PATENTS file in the same directory.
- */
-
-'use strict';
-
-/**
- * Use invariant() to assert state which your program assumes to be true.
- *
- * Provide sprintf-style format (only %s is supported) and arguments
- * to provide information about what broke and what you were
- * expecting.
- *
- * The invariant message will be stripped in production, but the invariant
- * will remain to ensure logic does not differ in production.
- */
-
-var invariant = function(condition, format, a, b, c, d, e, f) {
-  if ("production" !== 'production') {
-    if (format === undefined) {
-      throw new Error('invariant requires an error message argument');
-    }
-  }
-
-  if (!condition) {
-    var error;
-    if (format === undefined) {
-      error = new Error(
-        'Minified exception occurred; use the non-minified dev environment ' +
-        'for the full error message and additional helpful warnings.'
-      );
-    } else {
-      var args = [a, b, c, d, e, f];
-      var argIndex = 0;
-      error = new Error(
-        format.replace(/%s/g, function() { return args[argIndex++]; })
-      );
-      error.name = 'Invariant Violation';
+  var sha256 = function(message, is224) {
+    var notString = typeof(message) != 'string';
+    if(notString && message.constructor == root.ArrayBuffer) {
+      message = new Uint8Array(message);
     }
 
-    error.framesToPop = 1; // we don't care about invariant's own frame
-    throw error;
+    var h0, h1, h2, h3, h4, h5, h6, h7, block, code, first = true, end = false,
+        i, j, index = 0, start = 0, bytes = 0, length = message.length,
+        s0, s1, maj, t1, t2, ch, ab, da, cd, bc;
+
+    if(is224) {
+      h0 = 0xc1059ed8;
+      h1 = 0x367cd507;
+      h2 = 0x3070dd17;
+      h3 = 0xf70e5939;
+      h4 = 0xffc00b31;
+      h5 = 0x68581511;
+      h6 = 0x64f98fa7;
+      h7 = 0xbefa4fa4;
+    } else { // 256
+      h0 = 0x6a09e667;
+      h1 = 0xbb67ae85;
+      h2 = 0x3c6ef372;
+      h3 = 0xa54ff53a;
+      h4 = 0x510e527f;
+      h5 = 0x9b05688c;
+      h6 = 0x1f83d9ab;
+      h7 = 0x5be0cd19;
+    }
+    block = 0;
+    do {
+      blocks[0] = block;
+      blocks[16] = blocks[1] = blocks[2] = blocks[3] =
+      blocks[4] = blocks[5] = blocks[6] = blocks[7] =
+      blocks[8] = blocks[9] = blocks[10] = blocks[11] =
+      blocks[12] = blocks[13] = blocks[14] = blocks[15] = 0;
+      if(notString) {
+        for (i = start;index < length && i < 64; ++index) {
+          blocks[i >> 2] |= message[index] << SHIFT[i++ & 3];
+        }
+      } else {
+        for (i = start;index < length && i < 64; ++index) {
+          code = message.charCodeAt(index);
+          if (code < 0x80) {
+            blocks[i >> 2] |= code << SHIFT[i++ & 3];
+          } else if (code < 0x800) {
+            blocks[i >> 2] |= (0xc0 | (code >> 6)) << SHIFT[i++ & 3];
+            blocks[i >> 2] |= (0x80 | (code & 0x3f)) << SHIFT[i++ & 3];
+          } else if (code < 0xd800 || code >= 0xe000) {
+            blocks[i >> 2] |= (0xe0 | (code >> 12)) << SHIFT[i++ & 3];
+            blocks[i >> 2] |= (0x80 | ((code >> 6) & 0x3f)) << SHIFT[i++ & 3];
+            blocks[i >> 2] |= (0x80 | (code & 0x3f)) << SHIFT[i++ & 3];
+          } else {
+            code = 0x10000 + (((code & 0x3ff) << 10) | (message.charCodeAt(++index) & 0x3ff));
+            blocks[i >> 2] |= (0xf0 | (code >> 18)) << SHIFT[i++ & 3];
+            blocks[i >> 2] |= (0x80 | ((code >> 12) & 0x3f)) << SHIFT[i++ & 3];
+            blocks[i >> 2] |= (0x80 | ((code >> 6) & 0x3f)) << SHIFT[i++ & 3];
+            blocks[i >> 2] |= (0x80 | (code & 0x3f)) << SHIFT[i++ & 3];
+          }
+        }
+      }
+      bytes += i - start;
+      start = i - 64;
+      if(index == length) {
+        blocks[i >> 2] |= EXTRA[i & 3];
+        ++index;
+      }
+      block = blocks[16];
+      if(index > length && i < 56) {
+        blocks[15] = bytes << 3;
+        end = true;
+      }
+
+      var a = h0, b = h1, c = h2, d = h3, e = h4, f = h5, g = h6, h = h7;
+      for(j = 16;j < 64;++j) {
+        // rightrotate
+        t1 = blocks[j - 15];
+        s0 = ((t1 >>> 7) | (t1 << 25)) ^ ((t1 >>> 18) | (t1 << 14)) ^ (t1 >>> 3);
+        t1 = blocks[j - 2];
+        s1 = ((t1 >>> 17) | (t1 << 15)) ^ ((t1 >>> 19) | (t1 << 13)) ^ (t1 >>> 10);
+        blocks[j] = blocks[j - 16] + s0 + blocks[j - 7] + s1 << 0;
+      }
+
+      bc = b & c;
+      for(j = 0;j < 64;j += 4) {
+        if(first) {
+          if(is224) {
+            ab = 300032;
+            t1 = blocks[0] - 1413257819;
+            h = t1 - 150054599 << 0;
+            d = t1 + 24177077 << 0;
+          } else {
+            ab = 704751109;
+            t1 = blocks[0] - 210244248;
+            h = t1 - 1521486534 << 0;
+            d = t1 + 143694565 << 0;
+          }
+          first = false;
+        } else {
+          s0 = ((a >>> 2) | (a << 30)) ^ ((a >>> 13) | (a << 19)) ^ ((a >>> 22) | (a << 10));
+          s1 = ((e >>> 6) | (e << 26)) ^ ((e >>> 11) | (e << 21)) ^ ((e >>> 25) | (e << 7));
+          ab = a & b;
+          maj = ab ^ (a & c) ^ bc;
+          ch = (e & f) ^ (~e & g);
+          t1 = h + s1 + ch + K[j] + blocks[j];
+          t2 = s0 + maj;
+          h = d + t1 << 0;
+          d = t1 + t2 << 0;
+        }
+        s0 = ((d >>> 2) | (d << 30)) ^ ((d >>> 13) | (d << 19)) ^ ((d >>> 22) | (d << 10));
+        s1 = ((h >>> 6) | (h << 26)) ^ ((h >>> 11) | (h << 21)) ^ ((h >>> 25) | (h << 7));
+        da = d & a;
+        maj = da ^ (d & b) ^ ab;
+        ch = (h & e) ^ (~h & f);
+        t1 = g + s1 + ch + K[j + 1] + blocks[j + 1];
+        t2 = s0 + maj;
+        g = c + t1 << 0;
+        c = t1 + t2 << 0;
+        s0 = ((c >>> 2) | (c << 30)) ^ ((c >>> 13) | (c << 19)) ^ ((c >>> 22) | (c << 10));
+        s1 = ((g >>> 6) | (g << 26)) ^ ((g >>> 11) | (g << 21)) ^ ((g >>> 25) | (g << 7));
+        cd = c & d;
+        maj = cd ^ (c & a) ^ da;
+        ch = (g & h) ^ (~g & e);
+        t1 = f + s1 + ch + K[j + 2] + blocks[j + 2];
+        t2 = s0 + maj;
+        f = b + t1 << 0;
+        b = t1 + t2 << 0;
+        s0 = ((b >>> 2) | (b << 30)) ^ ((b >>> 13) | (b << 19)) ^ ((b >>> 22) | (b << 10));
+        s1 = ((f >>> 6) | (f << 26)) ^ ((f >>> 11) | (f << 21)) ^ ((f >>> 25) | (f << 7));
+        bc = b & c;
+        maj = bc ^ (b & d) ^ cd;
+        ch = (f & g) ^ (~f & h);
+        t1 = e + s1 + ch + K[j + 3] + blocks[j + 3];
+        t2 = s0 + maj;
+        e = a + t1 << 0;
+        a = t1 + t2 << 0;
+      }
+
+      h0 = h0 + a << 0;
+      h1 = h1 + b << 0;
+      h2 = h2 + c << 0;
+      h3 = h3 + d << 0;
+      h4 = h4 + e << 0;
+      h5 = h5 + f << 0;
+      h6 = h6 + g << 0;
+      h7 = h7 + h << 0;
+    } while(!end);
+
+    var hex = HEX_CHARS[(h0 >> 28) & 0x0F] + HEX_CHARS[(h0 >> 24) & 0x0F] +
+              HEX_CHARS[(h0 >> 20) & 0x0F] + HEX_CHARS[(h0 >> 16) & 0x0F] +
+              HEX_CHARS[(h0 >> 12) & 0x0F] + HEX_CHARS[(h0 >> 8) & 0x0F] +
+              HEX_CHARS[(h0 >> 4) & 0x0F] + HEX_CHARS[h0 & 0x0F] +
+              HEX_CHARS[(h1 >> 28) & 0x0F] + HEX_CHARS[(h1 >> 24) & 0x0F] +
+              HEX_CHARS[(h1 >> 20) & 0x0F] + HEX_CHARS[(h1 >> 16) & 0x0F] +
+              HEX_CHARS[(h1 >> 12) & 0x0F] + HEX_CHARS[(h1 >> 8) & 0x0F] +
+              HEX_CHARS[(h1 >> 4) & 0x0F] + HEX_CHARS[h1 & 0x0F] +
+              HEX_CHARS[(h2 >> 28) & 0x0F] + HEX_CHARS[(h2 >> 24) & 0x0F] +
+              HEX_CHARS[(h2 >> 20) & 0x0F] + HEX_CHARS[(h2 >> 16) & 0x0F] +
+              HEX_CHARS[(h2 >> 12) & 0x0F] + HEX_CHARS[(h2 >> 8) & 0x0F] +
+              HEX_CHARS[(h2 >> 4) & 0x0F] + HEX_CHARS[h2 & 0x0F] +
+              HEX_CHARS[(h3 >> 28) & 0x0F] + HEX_CHARS[(h3 >> 24) & 0x0F] +
+              HEX_CHARS[(h3 >> 20) & 0x0F] + HEX_CHARS[(h3 >> 16) & 0x0F] +
+              HEX_CHARS[(h3 >> 12) & 0x0F] + HEX_CHARS[(h3 >> 8) & 0x0F] +
+              HEX_CHARS[(h3 >> 4) & 0x0F] + HEX_CHARS[h3 & 0x0F] +
+              HEX_CHARS[(h4 >> 28) & 0x0F] + HEX_CHARS[(h4 >> 24) & 0x0F] +
+              HEX_CHARS[(h4 >> 20) & 0x0F] + HEX_CHARS[(h4 >> 16) & 0x0F] +
+              HEX_CHARS[(h4 >> 12) & 0x0F] + HEX_CHARS[(h4 >> 8) & 0x0F] +
+              HEX_CHARS[(h4 >> 4) & 0x0F] + HEX_CHARS[h4 & 0x0F] +
+              HEX_CHARS[(h5 >> 28) & 0x0F] + HEX_CHARS[(h5 >> 24) & 0x0F] +
+              HEX_CHARS[(h5 >> 20) & 0x0F] + HEX_CHARS[(h5 >> 16) & 0x0F] +
+              HEX_CHARS[(h5 >> 12) & 0x0F] + HEX_CHARS[(h5 >> 8) & 0x0F] +
+              HEX_CHARS[(h5 >> 4) & 0x0F] + HEX_CHARS[h5 & 0x0F] +
+              HEX_CHARS[(h6 >> 28) & 0x0F] + HEX_CHARS[(h6 >> 24) & 0x0F] +
+              HEX_CHARS[(h6 >> 20) & 0x0F] + HEX_CHARS[(h6 >> 16) & 0x0F] +
+              HEX_CHARS[(h6 >> 12) & 0x0F] + HEX_CHARS[(h6 >> 8) & 0x0F] +
+              HEX_CHARS[(h6 >> 4) & 0x0F] + HEX_CHARS[h6 & 0x0F];
+    if(!is224) {
+      hex += HEX_CHARS[(h7 >> 28) & 0x0F] + HEX_CHARS[(h7 >> 24) & 0x0F] +
+             HEX_CHARS[(h7 >> 20) & 0x0F] + HEX_CHARS[(h7 >> 16) & 0x0F] +
+             HEX_CHARS[(h7 >> 12) & 0x0F] + HEX_CHARS[(h7 >> 8) & 0x0F] +
+             HEX_CHARS[(h7 >> 4) & 0x0F] + HEX_CHARS[h7 & 0x0F];
+    }
+    return hex;
+  };
+  
+  if(!root.JS_SHA256_TEST && NODE_JS) {
+    sha256.sha256 = sha256;
+    sha256.sha224 = sha224;
+    module.exports = sha256;
+  } else if(root) {
+    root.sha256 = sha256;
+    root.sha224 = sha224;
   }
-};
+}(this));
 
-module.exports = invariant;
-
-},{}]},{},[4])(4)
+}).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
+},{}]},{},[5])(5)
 });

@@ -6,6 +6,10 @@ Object.defineProperty(exports, "__esModule", {
 
 var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
 
+var _invariant = require('invariant');
+
+var _invariant2 = _interopRequireDefault(_invariant);
+
 var _filter2 = require('fast.js/array/filter');
 
 var _filter3 = _interopRequireDefault(_filter2);
@@ -43,7 +47,7 @@ var TOKEN_EXPIERS_IN = 3 * 30 * 24 * 60 * 60; // 3 months in sec
 var AccountManager = function (_EventEmitter) {
   _inherits(AccountManager, _EventEmitter);
 
-  function AccountManager(secretKey) {
+  function AccountManager(secretKey, email) {
     _classCallCheck(this, AccountManager);
 
     var _this = _possibleConstructorReturn(this, Object.getPrototypeOf(AccountManager).call(this));
@@ -53,40 +57,121 @@ var AccountManager = function (_EventEmitter) {
   }
 
   /**
-   * Authenticate given connection for using with given
-   * userId and relaunch all subscriptions. It also create
-   * JWT token and store it in the user object or renew provided.
-   * Returns a promise that will be resolved with object with
-   * `userId` and `token` fields.
-   * @param  {DDPConnection}  conn
-   * @param  {String}         userId
-   * @param  {String}         token
+   * Sends an email to a user. If email not provided then
+   * email will be sent to first available email. If no
+   * emails available then it throws an error.
+   * @param  {String} userId
+   * @param  {String} email
    * @return {Promise}
    */
 
 
   _createClass(AccountManager, [{
+    key: 'sendEmailForAccount',
+    value: function sendEmailForAccount(userId, letter, email) {
+      return MarsAccount.users().findOne(userId).then(function (user) {
+        (0, _invariant2.default)(user, 'No user with given id %s found', userId);
+
+        var targetEmail = email;
+        if (!targetEmail) {
+          targetEmail = user.emails[0].address;
+        }
+
+        // TODO
+      });
+    }
+
+    /**
+     * Returns a Promise that resolved with user object with
+     * given email or null if no user found
+     * @param  {String} email
+     * @return {Promise}
+     */
+
+  }, {
+    key: 'getUserByEmail',
+    value: function getUserByEmail(email) {
+      email = email.toLowerCase();
+      return MarsAccount.users().findOne({ 'emails.address': email });
+    }
+
+    /**
+     * Create new user with given email and passObj
+     * @param  {String} email
+     * @param  {Object} passObj
+     * @return {Promise}
+     */
+
+  }, {
+    key: 'createUserByEmailPass',
+    value: function createUserByEmailPass(email, passObj) {
+      email = email.toLowerCase();
+      var newUserObj = {
+        profile: {},
+        createdAt: new Date(),
+        services: { resume: { tokens: [] } },
+        emails: [{ address: email, verified: false }],
+        password: passObj
+      };
+
+      newUserObj._id = MarsAccount.users().idGenerator().value;
+      this.emit('user:create', newUserObj);
+      return MarsAccount.users().insert(newUserObj).then(function () {
+        return newUserObj;
+      });
+    }
+
+    /**
+     * Authenticate given connection for using with given
+     * userId and relaunch all subscriptions. It also create
+     * JWT token and store it in the user object or renew provided.
+     * Returns a promise that will be resolved with object with
+     * `userId` and `token` fields.
+     * @param  {DDPConnection}  conn
+     * @param  {String}         userId
+     * @param  {String}         token
+     * @return {Promise}
+     */
+
+  }, {
     key: 'authConnection',
     value: function authConnection(conn, userId, usedToken) {
       var _this2 = this;
 
       // Authorize connection
+      this.emit('user:authorize', userId);
       conn.data.userId = userId;
       conn.subManager.updateSubscriptions();
-      this.emit('user:authorized', userId);
 
       // Renew tokens of the user
       var users = MarsAccount.users();
       return users.findOne(userId).then(function (user) {
-        var _filterTokensAndCreat = _this2._filterTokensAndCreate(userId, user.tokens, usedToken);
+        var loginTokens = user.services.resume.tokens;
+
+        var _filterTokensAndCreat = _this2._filterTokensAndCreate(userId, loginTokens, usedToken);
 
         var validTokens = _filterTokensAndCreat.validTokens;
         var token = _filterTokensAndCreat.token;
 
-        return users.update(userId, { $set: { tokens: validTokens } }).then(function () {
+        return users.update(userId, {
+          $set: { 'services.resume.tokens': validTokens }
+        }).then(function () {
           return { userId: userId, token: token };
         });
       });
+    }
+
+    /**
+     * Remove userId from conneciton and update subscriptions
+     * @param  {DDPConnection} conn
+     * @return {Promise}
+     */
+
+  }, {
+    key: 'unauthConneciton',
+    value: function unauthConneciton(conn) {
+      delete conn.data.userId;
+      return conn.subManager.updateSubscriptions();
     }
 
     /**
@@ -99,23 +184,57 @@ var AccountManager = function (_EventEmitter) {
   }, {
     key: 'getOrCreateAccByProfile',
     value: function getOrCreateAccByProfile(profile) {
-      var _this3 = this;
+      var _services,
+          _this3 = this;
 
       var provider = profile.provider;
 
-      var newUserObj = {};
-      newUserObj.services = _defineProperty({}, provider, profile);
+      var newUserObj = {
+        profile: { name: profile.displayName },
+        createdAt: new Date(),
+        services: (_services = {}, _defineProperty(_services, provider, profile), _defineProperty(_services, 'resume', { tokens: [] }), _services)
+      };
 
-      return MarsAccount.users().update(_defineProperty({}, 'service.' + provider + '.id', profile.id), { $setOnInsert: newUserObj }, { upsert: true }).then(function (_ref) {
-        var original = _ref.original;
-        var updated = _ref.updated;
-
-        var user = updated[0];
-        if (original[0] === null) {
-          _this3.emit('user:created', user);
+      return MarsAccount.users().findOne(_defineProperty({}, 'services.' + provider + '.id', profile.id)).then(function (user) {
+        if (!user) {
+          newUserObj._id = MarsAccount.users().idGenerator().value;
+          _this3.emit('user:create', newUserObj);
+          return MarsAccount.users().insert(newUserObj).then(function () {
+            return newUserObj;
+          });
+        } else {
+          return user;
         }
-        return user;
       });
+    }
+
+    /**
+     * Adds given OAuth profile to given account.
+     * If profile of given provider already exists then it will
+     * be replaced
+     * @param {String} userId
+     * @param {Object} profile
+     */
+
+  }, {
+    key: 'addServiceToUser',
+    value: function addServiceToUser(userId, profile) {
+      var provider = profile.provider;
+
+      return MarsAccount.users().update(userId, { $set: _defineProperty({}, 'services.' + provider, profile) });
+    }
+
+    /**
+     * Verify given JWT token and returns incapsulated data.
+     * (object with `userId` field for now)
+     * @param  {String} token
+     * @return {Object}
+     */
+
+  }, {
+    key: 'verifyAuthToken',
+    value: function verifyAuthToken(token) {
+      return _jsonwebtoken2.default.verify(token, this._secretKey);
     }
 
     /**
@@ -137,7 +256,7 @@ var AccountManager = function (_EventEmitter) {
 
       var validTokens = (0, _filter3.default)(tokens, function (token) {
         try {
-          _jsonwebtoken2.default.verify(token, _this4._secretKey);
+          _this4.verifyAuthToken(token);
           return token !== usedToken;
         } catch (err) {
           return false;

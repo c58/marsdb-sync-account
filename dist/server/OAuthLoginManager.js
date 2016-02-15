@@ -4,6 +4,8 @@ Object.defineProperty(exports, "__esModule", {
   value: true
 });
 
+var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol" ? function (obj) { return typeof obj; } : function (obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol ? "symbol" : typeof obj; };
+
 var _extends = Object.assign || function (target) { for (var i = 1; i < arguments.length; i++) { var source = arguments[i]; for (var key in source) { if (Object.prototype.hasOwnProperty.call(source, key)) { target[key] = source[key]; } } } return target; };
 
 var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
@@ -55,7 +57,8 @@ var OAuthLoginManager = function () {
       delete _this._credentials[credentialToken];
 
       if (credential && credential.credentialSecret === secret) {
-        return _this._accManager.authConnection(ctx.connection, credential.userId);
+        var profile = credential.profile;
+        return _this._authorizeOAuth(ctx, profile);
       } else {
         throw new Error('No credential found with given token');
       }
@@ -66,9 +69,9 @@ var OAuthLoginManager = function () {
 
       var reqMock = { query: { access_token: accessToken } };
       return new Promise(function (resolve, reject) {
-        _passport2.default.authenticate(provider, function (err, user, info) {
-          if (!err && user) {
-            resolve(_this._accManager.authConnection(ctx.connection, user._id));
+        _passport2.default.authenticate(provider, function (err, profile, info) {
+          if (!err && profile) {
+            resolve(_this._authorizeOAuth(ctx, profile));
           } else {
             reject(err);
           }
@@ -78,10 +81,7 @@ var OAuthLoginManager = function () {
 
     this._handleOAuthLogin = function (accessToken, refreshToken, profile, done) {
       delete profile._raw;
-      delete profile._json;
-      _this._accManager.getOrCreateAccByProfile(profile).then(function (user) {
-        return done(null, user);
-      }, done);
+      done(null, profile);
     };
 
     this._handleGETPopup = function (req, res, next) {
@@ -104,16 +104,15 @@ var OAuthLoginManager = function () {
       var provider = req.params.provider;
       var credentialToken = new Buffer(req.query.state, 'base64').toString('binary');
 
-      _passport2.default.authenticate(provider, function (err, user, info) {
+      _passport2.default.authenticate(provider, function (err, profile, info) {
         var config = {};
-        if (!err && user && credentialToken) {
-          var userId = user._id;
+        if (!err && profile && credentialToken) {
           var credentialSecret = _marsdb.Random.default().id(20);
           config.setCredentialToken = true;
           config.credentialSecret = credentialSecret;
           config.credentialToken = credentialToken;
 
-          _this._credentials[credentialToken] = { credentialSecret: credentialSecret, userId: userId };
+          _this._credentials[credentialToken] = { credentialSecret: credentialSecret, profile: profile };
           setTimeout(function () {
             return delete _this._credentials[credentialToken];
           }, 5000);
@@ -165,6 +164,39 @@ var OAuthLoginManager = function () {
     }
 
     /**
+     * Authorize connection with given OAuth profile.
+     * Create new user if connection is not authorized with some user,
+     * otherwise attaches profile to currently authorized user.
+     * In any case authorize connection.
+     * @param  {Context} ctx
+     * @param  {Object}  profile
+     * @return {Promise}
+     */
+
+  }, {
+    key: '_authorizeOAuth',
+    value: function _authorizeOAuth(ctx, profile) {
+      var _this2 = this;
+
+      if (ctx.data.userId) {
+        var _ret = function () {
+          var userId = ctx.data.userId;
+          return {
+            v: _this2._accManager.addServiceToUser(userId, profile).then(function () {
+              return _this2._accManager.authConnection(ctx.connection, userId);
+            })
+          };
+        }();
+
+        if ((typeof _ret === 'undefined' ? 'undefined' : _typeof(_ret)) === "object") return _ret.v;
+      } else {
+        return this._accManager.getOrCreateAccByProfile(profile).then(function (user) {
+          return _this2._accManager.authConnection(ctx.connection, user._id);
+        });
+      }
+    }
+
+    /**
      * Login user with given credential token and secret. The secret
      * comes to a client from popup, generated by `_handleGETPopupCallback`
      * method. If no credential token with given secret found then
@@ -191,8 +223,7 @@ var OAuthLoginManager = function () {
 
 
     /**
-     * Try to get user object by given OAuth user profile
-     * and on fail creates new user.
+     * Just done with profile
      * @param  {String}   accessToken
      * @param  {String}   refreshToken
      * @param  {Object}   profile

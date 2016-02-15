@@ -12,13 +12,15 @@ var _marsdb = require('marsdb');
 
 var _marsdbSyncClient = require('marsdb-sync-client');
 
-var _marsdbSyncClient2 = _interopRequireDefault(_marsdbSyncClient);
+var MarsSync = _interopRequireWildcard(_marsdbSyncClient);
 
 var _BasicLoginClient2 = require('./BasicLoginClient');
 
 var _BasicLoginClient3 = _interopRequireDefault(_BasicLoginClient2);
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
+
+function _interopRequireWildcard(obj) { if (obj && obj.__esModule) { return obj; } else { var newObj = {}; if (obj != null) { for (var key in obj) { if (Object.prototype.hasOwnProperty.call(obj, key)) newObj[key] = obj[key]; } } newObj.default = obj; return newObj; } }
 
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
@@ -74,7 +76,7 @@ var BasicOAuthLoginClient = function (_BasicLoginClient) {
             if (_haveLocalStorage) {
               localStorage.removeItem(credentialToken);
             }
-            _marsdbSyncClient2.default.call(_urlPrefix + '/secret/login', credentialToken, secret).then(_this2._handleLoginResponse, reject).then(resolve);
+            MarsSync.call(_urlPrefix + '/secret/login', credentialToken, secret).then(_this2._handleLoginResponse, reject).then(resolve);
           }
         });
       }).then(null, this._handleLoginError);
@@ -89,7 +91,7 @@ var BasicOAuthLoginClient = function (_BasicLoginClient) {
   }, {
     key: 'loginWithToken',
     value: function loginWithToken(serviceName, accessToken) {
-      return _marsdbSyncClient2.default.call(_urlPrefix + '/token/login', serviceName, accessToken).then(this._handleLoginResponse, this._handleLoginError);
+      return MarsSync.call(_urlPrefix + '/token/login', serviceName, accessToken).then(this._handleLoginResponse, this._handleLoginError);
     }
   }, {
     key: '_handleCredentialSecret',

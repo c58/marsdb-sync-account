@@ -3,6 +3,9 @@
 Object.defineProperty(exports, "__esModule", {
   value: true
 });
+exports._handleSuccessLogin = _handleSuccessLogin;
+exports._handleFailLogin = _handleFailLogin;
+exports.configure = configure;
 exports.currentUser = currentUser;
 exports.logout = logout;
 exports.restoreLogin = restoreLogin;
@@ -10,8 +13,6 @@ exports.loginBasic = loginBasic;
 exports.register = register;
 exports.loginOAuth = loginOAuth;
 exports.loginOAuthToken = loginOAuthToken;
-
-var _marsdb = require('marsdb');
 
 var _OAuthLoginClient = require('./OAuthLoginClient');
 
@@ -23,14 +24,51 @@ var _BasicLoginClient2 = _interopRequireDefault(_BasicLoginClient);
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
+function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+
+var EventEmitter = typeof window !== 'undefined' && window.Mars ? window.Mars.EventEmitter : require('marsdb').EventEmitter;
+var MarsClient = typeof window !== 'undefined' && window.Mars ? window.Mars.Meteor : require('marsdb-sync-client');
+
 // Internals
-var _basicLogin = new _BasicLoginClient2.default();
-var _oauthLogin = new _OAuthLoginClient2.default();
-var _updateUserEmitter = new _marsdb.EventEmitter();
-var _handleSuccessLogin = function _handleSuccessLogin(userId) {
+var _basicLogin = null;
+var _oauthLogin = null;
+var _updateUserEmitter = null;
+
+function _handleSuccessLogin(userId) {
   _updateUserEmitter.emit('change', userId);
   return userId;
+}
+
+function _handleFailLogin(err) {
+  _updateUserEmitter.emit('change', null);
+  throw err;
+}
+
+var RestoreLoginManager = function RestoreLoginManager(ddpConn) {
+  _classCallCheck(this, RestoreLoginManager);
+
+  ddpConn.on('status:connected', function (reconnected) {
+    if (reconnected) {
+      restoreLogin();
+    }
+  });
 };
+
+/**
+ * Configure Mars stack to use Accounts
+ * @param  {Object} options
+ */
+
+
+function configure() {
+  var options = arguments.length <= 0 || arguments[0] === undefined ? {} : arguments[0];
+
+  MarsClient.addManager(RestoreLoginManager);
+  _basicLogin = new _BasicLoginClient2.default();
+  _oauthLogin = new _OAuthLoginClient2.default();
+  _updateUserEmitter = new EventEmitter();
+  restoreLogin();
+}
 
 /**
  * Return a cursor that returns current logged in user object,
@@ -62,7 +100,7 @@ function logout() {
  * @return {Promise}
  */
 function restoreLogin() {
-  return _basicLogin.restoreLogin().then(_handleSuccessLogin);
+  return _basicLogin.restoreLogin().then(_handleSuccessLogin, _handleFailLogin);
 }
 
 /**
@@ -74,19 +112,19 @@ function restoreLogin() {
  * @return {Promise}
  */
 function loginBasic(username, password) {
-  return _basicLogin.login(username, password).then(_handleSuccessLogin);
+  return _basicLogin.login(username, password).then(_handleSuccessLogin, _handleFailLogin);
 }
 
 /**
- * Register the user with given username and password.
+ * Register the user with given email and password.
  * If registered successfully the user will be also
  * registered and promise resolved as any other login method.
- * @param  {String} username
+ * @param  {String} email
  * @param  {String} password
  * @return {Promise}
  */
-function register(username, password) {
-  return _basicLogin.register(username, password).then(_handleSuccessLogin);
+function register(email, password) {
+  return _basicLogin.register(email, password).then(_handleSuccessLogin, _handleFailLogin);
 }
 
 /**
@@ -97,7 +135,7 @@ function register(username, password) {
  * @return {Promise}
  */
 function loginOAuth(serviceName) {
-  return _oauthLogin.login(serviceName).then(_handleSuccessLogin);
+  return _oauthLogin.login(serviceName).then(_handleSuccessLogin, _handleFailLogin);
 }
 
 /**
@@ -109,5 +147,5 @@ function loginOAuth(serviceName) {
  * @return {Promise}
  */
 function loginOAuthToken(serviceName, accessToken) {
-  return _oauthLogin.loginWithToken(serviceName, accessToken).then(_handleSuccessLogin);
+  return _oauthLogin.loginWithToken(serviceName, accessToken).then(_handleSuccessLogin, _handleFailLogin);
 }

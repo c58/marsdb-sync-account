@@ -6,21 +6,39 @@ Object.defineProperty(exports, "__esModule", {
 
 var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
 
+exports._createPasswordObject = _createPasswordObject;
+
+var _jsSha = require('js-sha256');
+
+var _jsSha2 = _interopRequireDefault(_jsSha);
+
 var _marsdbSyncClient = require('marsdb-sync-client');
 
-var _marsdbSyncClient2 = _interopRequireDefault(_marsdbSyncClient);
+var MarsSync = _interopRequireWildcard(_marsdbSyncClient);
+
+var _ErrorCodes = require('../common/ErrorCodes');
+
+function _interopRequireWildcard(obj) { if (obj && obj.__esModule) { return obj; } else { var newObj = {}; if (obj != null) { for (var key in obj) { if (Object.prototype.hasOwnProperty.call(obj, key)) newObj[key] = obj[key]; } } newObj.default = obj; return newObj; } }
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
 // Internals
+function _createPasswordObject(passStr) {
+  return {
+    algorithm: 'sha-256',
+    digest: (0, _jsSha2.default)(passStr)
+  };
+}
+
+// Constants
 var _haveLocalstorage = typeof localStorage !== 'undefined' || null;
 var _tokenKey = 'auth.login.token';
 var _userIdKey = 'auth.login.id';
 
 /**
- * General methods for logging in the client
+ * Email/Password login clint
  */
 
 var BasicLoginClient = function () {
@@ -58,13 +76,14 @@ var BasicLoginClient = function () {
 
 
     /**
-     * Login user with username and password
-     * @param  {String} username
+     * Login user with email and password
+     * @param  {String} email
      * @param  {String} password
      * @return {Promise}
      */
-    value: function login(username, password) {
-      return _marsdbSyncClient2.default.call('/auth/basic/login', username, password).then(this._handleLoginResponse, this._handleLoginError);
+    value: function login(email, password) {
+      var passObj = _createPasswordObject(password);
+      return MarsSync.call('/auth/basic/login', email, passObj).then(this._handleLoginResponse, this._handleLoginError);
     }
 
     /**
@@ -74,7 +93,7 @@ var BasicLoginClient = function () {
   }, {
     key: 'logout',
     value: function logout() {
-      _marsdbSyncClient2.default.call('/auth/basic/logout');
+      MarsSync.call('/auth/basic/logout');
       this._unsetLoginData();
     }
 
@@ -88,8 +107,9 @@ var BasicLoginClient = function () {
 
   }, {
     key: 'register',
-    value: function register(username, password) {
-      return _marsdbSyncClient2.default.call('/auth/basic/register', username, password).then(this._handleLoginResponse, this._handleLoginError);
+    value: function register(email, password) {
+      var passObj = _createPasswordObject(password);
+      return MarsSync.call('/auth/basic/register', email, passObj).then(this._handleLoginResponse, this._handleLoginError);
     }
 
     /**
@@ -108,9 +128,9 @@ var BasicLoginClient = function () {
       return Promise.resolve().then(function () {
         var token = _this2._getRestoreLoginToken();
         if (token) {
-          return _marsdbSyncClient2.default.call('/auth/token/login', token);
+          return MarsSync.apply('/auth/token/login', [token], { retryOnDisconnect: true });
         } else {
-          throw new Error('No login toke found');
+          throw new Error('No login tokek found');
         }
       }).then(this._handleLoginResponse, this._handleLoginError);
     }

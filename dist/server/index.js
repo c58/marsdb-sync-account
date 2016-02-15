@@ -5,7 +5,7 @@ Object.defineProperty(exports, "__esModule", {
 });
 exports.configure = configure;
 exports.addOAuthStrategy = addOAuthStrategy;
-exports.listenUserCreated = listenUserCreated;
+exports.listenUserCreate = listenUserCreate;
 exports.users = users;
 
 var _invariant = require('invariant');
@@ -69,12 +69,13 @@ function addOAuthStrategy(provider, strategyCreatorFn) {
 }
 
 /**
- * Listen for new user created event. Given callback
- * will be executed with user object as first argument
+ * Listen for new user create event. Given callback
+ * will be executed with user object as first argument.
+ * You can change user object, changed object will be saved.
  * @param  {Function} handlerFn
  */
-function listenUserCreated(handlerFn) {
-  _accManager.on('user:created', handlerFn);
+function listenUserCreate(handlerFn) {
+  _accManager.on('user:create', handlerFn);
 }
 
 /**

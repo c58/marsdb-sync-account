@@ -67,11 +67,12 @@ gulp.task('build:browser', ['build:node'], function() {
     entries: config.browser.entry,
     debug: false,
     fullPaths: false,
-    standalone: 'Mars.Meteor',
+    standalone: 'Mars.Account',
   };
 
   return browserify(customOpts)
     .exclude('marsdb')
+    .exclude('marsdb-sync-client')
     .bundle()
     .pipe(source(config.browser.bundleName))
     .pipe(buffer())

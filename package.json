@@ -22,7 +22,6 @@
   "dependencies": {
     "bcryptjs": "^2.3.0",
     "email-validator": "^1.0.4",
-    "escape-string-regexp": "^1.0.4",
     "fast.js": "^0.1.1",
     "invariant": "^2.2.0",
     "js-sha256": "^0.3.0",
@@ -33,12 +32,12 @@
   },
   "peerDependencies": {
     "marsdb": "0.6.x",
-    "marsdb-sync-client": "0.1.x",
+    "marsdb-sync-client": "0.2.x",
     "marsdb-sync-server": "0.2.x"
   },
   "devDependencies": {
     "marsdb": "^0.6.0",
-    "marsdb-sync-client": "^0.1.0",
+    "marsdb-sync-client": "^0.2.2",
     "marsdb-sync-server": "^0.2.0",
     "core-js": "^2.0.0",
     "babel-cli": "^6.3.17",
