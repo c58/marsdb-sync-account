@@ -6,6 +6,7 @@ Object.defineProperty(exports, "__esModule", {
 exports.configure = configure;
 exports.addOAuthStrategy = addOAuthStrategy;
 exports.listenUserCreate = listenUserCreate;
+exports.listenEmailVerify = listenEmailVerify;
 exports.users = users;
 
 var _invariant = require('invariant');
@@ -45,11 +46,12 @@ function configure(_ref) {
   var rootUrl = _ref.rootUrl;
   var usersColl = _ref.usersColl;
   var secretKey = _ref.secretKey;
+  var smtpUrl = _ref.smtpUrl;
 
   (0, _invariant2.default)(middlewareApp, 'AccountManager.configure(...): you need to pass express/connect app ' + 'to MarsSync.configure() `middlewareApp` field');
 
   _usersCollection = usersColl || new _marsdb.Collection('users');
-  _accManager = new _AccountManager2.default(secretKey);
+  _accManager = new _AccountManager2.default(secretKey, smtpUrl);
   _oauthManager = new _OAuthLoginManager2.default(_accManager, middlewareApp, rootUrl);
   _basicManager = new _BasicLoginManager2.default(_accManager, middlewareApp, rootUrl);
 }
@@ -76,6 +78,10 @@ function addOAuthStrategy(provider, strategyCreatorFn) {
  */
 function listenUserCreate(handlerFn) {
   _accManager.on('user:create', handlerFn);
+}
+
+function listenEmailVerify(handlerFn) {
+  _accManager.on('user:email:verify', handlerFn);
 }
 
 /**

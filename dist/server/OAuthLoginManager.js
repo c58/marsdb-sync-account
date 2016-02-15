@@ -35,7 +35,7 @@ function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { de
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
 // Internals
-var _urlPrefix = '/_auth/oauth';
+var _urlPrefix = '/auth/oauth';
 var _popupResponseTemplate = _fs2.default.readFileSync(_path2.default.join(__dirname, '..', '..', 'resources', 'end_of_popup_response.html')).toString();
 
 /**

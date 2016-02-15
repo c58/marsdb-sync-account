@@ -63,6 +63,9 @@ MarsAccounts.addOAuthStrategy('vkontakte', (cbUrl, cb) =>
     callbackURL: cbUrl
   }, cb)
 );
+MarsAccounts.listenEmailVerify((email) => {
+  email.text = email.verifyUrl;
+})
 
 requireDir('./js/models');
 requireDir('./js/publishers');

@@ -24,6 +24,10 @@ var _index = require('./index');
 
 var MarsAccount = _interopRequireWildcard(_index);
 
+var _EmailSender = require('./EmailSender');
+
+var _EmailSender2 = _interopRequireDefault(_EmailSender);
+
 function _interopRequireWildcard(obj) { if (obj && obj.__esModule) { return obj; } else { var newObj = {}; if (obj != null) { for (var key in obj) { if (Object.prototype.hasOwnProperty.call(obj, key)) newObj[key] = obj[key]; } } newObj.default = obj; return newObj; } }
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
@@ -47,12 +51,13 @@ var TOKEN_EXPIERS_IN = 3 * 30 * 24 * 60 * 60; // 3 months in sec
 var AccountManager = function (_EventEmitter) {
   _inherits(AccountManager, _EventEmitter);
 
-  function AccountManager(secretKey, email) {
+  function AccountManager(secretKey, smtpUrl) {
     _classCallCheck(this, AccountManager);
 
     var _this = _possibleConstructorReturn(this, Object.getPrototypeOf(AccountManager).call(this));
 
     _this._secretKey = secretKey;
+    _this._emailSender = new _EmailSender2.default(smtpUrl);
     return _this;
   }
 
@@ -68,7 +73,9 @@ var AccountManager = function (_EventEmitter) {
 
   _createClass(AccountManager, [{
     key: 'sendEmailForAccount',
-    value: function sendEmailForAccount(userId, letter, email) {
+    value: function sendEmailForAccount(userId, type, letter, email) {
+      var _this2 = this;
+
       return MarsAccount.users().findOne(userId).then(function (user) {
         (0, _invariant2.default)(user, 'No user with given id %s found', userId);
 
@@ -77,7 +84,8 @@ var AccountManager = function (_EventEmitter) {
           targetEmail = user.emails[0].address;
         }
 
-        // TODO
+        _this2.emit('user:email:' + type, letter);
+        return _this2._emailSender.send(targetEmail, letter);
       });
     }
 
@@ -136,7 +144,7 @@ var AccountManager = function (_EventEmitter) {
   }, {
     key: 'authConnection',
     value: function authConnection(conn, userId, usedToken) {
-      var _this2 = this;
+      var _this3 = this;
 
       // Authorize connection
       this.emit('user:authorize', userId);
@@ -148,7 +156,7 @@ var AccountManager = function (_EventEmitter) {
       return users.findOne(userId).then(function (user) {
         var loginTokens = user.services.resume.tokens;
 
-        var _filterTokensAndCreat = _this2._filterTokensAndCreate(userId, loginTokens, usedToken);
+        var _filterTokensAndCreat = _this3._filterTokensAndCreate(userId, loginTokens, usedToken);
 
         var validTokens = _filterTokensAndCreat.validTokens;
         var token = _filterTokensAndCreat.token;
@@ -185,7 +193,7 @@ var AccountManager = function (_EventEmitter) {
     key: 'getOrCreateAccByProfile',
     value: function getOrCreateAccByProfile(profile) {
       var _services,
-          _this3 = this;
+          _this4 = this;
 
       var provider = profile.provider;
 
@@ -198,7 +206,7 @@ var AccountManager = function (_EventEmitter) {
       return MarsAccount.users().findOne(_defineProperty({}, 'services.' + provider + '.id', profile.id)).then(function (user) {
         if (!user) {
           newUserObj._id = MarsAccount.users().idGenerator().value;
-          _this3.emit('user:create', newUserObj);
+          _this4.emit('user:create', newUserObj);
           return MarsAccount.users().insert(newUserObj).then(function () {
             return newUserObj;
           });
@@ -238,6 +246,21 @@ var AccountManager = function (_EventEmitter) {
     }
 
     /**
+     * Created JWT token signed with secret key for given payload
+     * @param  {Object}   payload
+     * @param  {Integer}  expiresIn
+     * @return {String}
+     */
+
+  }, {
+    key: 'createToken',
+    value: function createToken(payload) {
+      var expiresIn = arguments.length <= 1 || arguments[1] === undefined ? TOKEN_EXPIERS_IN : arguments[1];
+
+      return _jsonwebtoken2.default.sign(payload, this._secretKey, { expiresIn: expiresIn });
+    }
+
+    /**
      * Filter out invalid and used tokens from given array
      * and creates new valid token
      * @param  {String} userId
@@ -249,21 +272,21 @@ var AccountManager = function (_EventEmitter) {
   }, {
     key: '_filterTokensAndCreate',
     value: function _filterTokensAndCreate(userId) {
-      var _this4 = this;
+      var _this5 = this;
 
       var tokens = arguments.length <= 1 || arguments[1] === undefined ? [] : arguments[1];
       var usedToken = arguments[2];
 
       var validTokens = (0, _filter3.default)(tokens, function (token) {
         try {
-          _this4.verifyAuthToken(token);
+          _this5.verifyAuthToken(token);
           return token !== usedToken;
         } catch (err) {
           return false;
         }
       });
 
-      var token = _jsonwebtoken2.default.sign({ userId: userId }, this._secretKey, { expiresIn: TOKEN_EXPIERS_IN });
+      var token = this.createToken({ userId: userId });
       validTokens.push(token);
 
       return { validTokens: validTokens, token: token };

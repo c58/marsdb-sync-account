@@ -29,7 +29,7 @@ function _possibleConstructorReturn(self, call) { if (!self) { throw new Referen
 function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function, not " + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; }
 
 // Internals
-var _urlPrefix = '/_auth/oauth';
+var _urlPrefix = '/auth/oauth';
 var _isCordova = typeof window !== 'undefined' && !!window.cordova;
 var _haveLocalStorage = typeof localStorage !== 'undefined';
 var _credentialSecrets = {};
